@@ -74,6 +74,12 @@ npm install -g slack-lists-cli
 - `groups:read`
 - `files:write`
 
+Optional (for comment history via `comments`):
+- `channels:history`
+- `groups:history`
+- `im:history`
+- `mpim:history`
+
 ## Notes
 
 - Slack does **not** expose a list discovery API as of January 2026. `slack-lists lists` will return an informative error unless Slack adds this method.
@@ -121,6 +127,7 @@ slack-lists items update <list-id> <item-id> --field "ColumnKey=value"
 
 ```
 slack-lists comment <list-id> <item-id> "Comment text" --message-url <url>
+slack-lists comments <list-id> <item-id> --compact
 slack-lists ask <channel> "Question text?" --user @someone
 slack-lists post <channel> "Message text"
 ```
@@ -203,6 +210,7 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 - `slack-lists items list <list-id>`
 - `slack-lists items create <list-id> --name "Task" --priority high`
 - `slack-lists items update <list-id> <item-id> --status completed`
+- `slack-lists comments <list-id> <item-id> --compact`
 - `slack-lists evidence upload <list-id> <item-id> ./file.png`
 ```
 

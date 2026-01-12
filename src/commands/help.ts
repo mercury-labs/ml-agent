@@ -110,6 +110,12 @@ function getCapabilities() {
         options: ["--channel <channel>", "--thread-ts <ts>", "--message-url <url>"]
       },
       {
+        command: "comments <list-id> <item-id>",
+        description: "Fetch item comment thread (requires history scopes)",
+        args: ["list-id", "item-id"],
+        options: ["--channel <channel>", "--thread-ts <ts>", "--message-url <url>", "--limit <count>", "--compact"]
+      },
+      {
         command: "ask <channel> <text>",
         description: "Ask a question in a channel",
         args: ["channel", "text"],

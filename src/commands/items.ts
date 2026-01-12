@@ -102,7 +102,9 @@ export function registerItemsCommands(program: Command): void {
         } catch {
           // Best-effort cache update; ignore schema parsing errors.
         }
-        const item = (result as { item?: Record<string, unknown> }).item;
+        const item =
+          (result as { item?: Record<string, unknown>; record?: Record<string, unknown> }).item ??
+          (result as { record?: Record<string, unknown> }).record;
         if (item) {
           await syncSchemaCache(listId, [item]);
         }
