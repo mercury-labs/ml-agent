@@ -61,6 +61,7 @@ Quick steps:
 - Export the token: `export SLACK_TOKEN=...`
 
 If you do not need private channel resolution, you can remove `groups:read` from the manifest.
+If you want token rotation, add OAuth redirect URLs and set `token_rotation_enabled` to true.
 
 ## Notes
 
