@@ -32,6 +32,10 @@ function getCapabilities() {
       {
         name: "SLACK_LIST_DEFAULT_CHANNEL",
         description: "Fallback channel for comment threads (ID or #name)"
+      },
+      {
+        name: "SLACK_LIST_CONFIG_PATH",
+        description: "Optional path to config.json (per-list defaults)"
       }
     ],
     schema_cache: {
@@ -65,6 +69,12 @@ function getCapabilities() {
         options: []
       },
       {
+        command: "lists id <url>",
+        description: "Extract list ID from Slack list URL",
+        args: ["url"],
+        options: []
+      },
+      {
         command: "lists info <list-id>",
         description: "Fetch list schema (falls back to inference when list metadata is unavailable)",
         args: ["list-id"],
@@ -74,7 +84,7 @@ function getCapabilities() {
         command: "schema <list-id>",
         description: "Compact schema output for agentic updates",
         args: ["list-id"],
-        options: []
+        options: ["--for-update"]
       },
       {
         command: "lists export <list-id>",
@@ -86,7 +96,7 @@ function getCapabilities() {
         command: "items list <list-id>",
         description: "List items (filters require schema; cache syncs from reads)",
         args: ["list-id"],
-        options: ["--status <status>", "--assignee <assignee>", "--archived", "--limit <limit>"]
+        options: ["--status <status>", "--assignee <assignee>", "--archived", "--limit <limit>", "--compact"]
       },
       {
         command: "items get <list-id> <item-id>",

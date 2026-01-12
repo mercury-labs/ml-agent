@@ -54,6 +54,7 @@ npm install -g slack-lists-cli
 - `SLACK_BOT_TOKEN` or `SLACK_USER_TOKEN` (optional)
 - `SLACK_LIST_SCHEMA_PATH` (optional default schema file)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional default channel for comment threads)
+- `SLACK_LIST_CONFIG_PATH` (optional path to config.json for per-list defaults)
 - `.env.local` or `.env` files are loaded automatically if present
 
 ## Global Options
@@ -110,8 +111,10 @@ slack-lists auth status
 
 ```
 slack-lists lists
+slack-lists lists id <list-url>
 slack-lists lists info <list-id>
 slack-lists schema <list-id>
+slack-lists schema <list-id> --for-update
 slack-lists lists export <list-id> --out ./export.bin
 ```
 
@@ -126,6 +129,7 @@ slack-lists access delete <list-id> --channels C123
 
 ```
 slack-lists items list <list-id>
+slack-lists items list <list-id> --compact
 slack-lists items get <list-id> <item-id>
 slack-lists items create <list-id> --name "Task" --priority high
 slack-lists items update <list-id> <item-id> --status completed
@@ -211,22 +215,37 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 ### Required env
 - `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional, channel ID or #name for auto-threading)
+- `SLACK_LIST_CONFIG_PATH` (optional config.json for per-list defaults)
 
 ### Schema handling
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - Cache is updated automatically on list/item reads; for empty lists, pass `--schema`.
 - Use `--refresh-schema` if columns/options change.
 - Use `slack-lists schema <list-id>` for compact, token-efficient schema output.
+- Use `slack-lists schema <list-id> --for-update` for update hints and examples.
 
 ### Default channel for comments
 - Set `SLACK_LIST_DEFAULT_CHANNEL` (e.g. `#team-channel` or `C12345678`) so the CLI can
   auto-create a thread and store its permalink when you post the first comment on an item.
 
+You can also set per-list defaults in `~/.config/slack-lists-cli/config.json`:
+```json
+{
+  "default_channel": "C12345678",
+  "lists": {
+    "F123456789": { "channel": "C12345678" }
+  }
+}
+```
+
 ### Common commands
 - `slack-lists auth status`
 - `slack-lists lists info <list-id>`
+- `slack-lists lists id <list-url>`
 - `slack-lists schema <list-id>`
+- `slack-lists schema <list-id> --for-update`
 - `slack-lists items list <list-id>`
+- `slack-lists items list <list-id> --compact`
 - `slack-lists items create <list-id> --name "Task" --priority high`
 - `slack-lists items update <list-id> <item-id> --status completed`
 - `slack-lists comments <list-id> <item-id> --compact`

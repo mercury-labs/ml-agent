@@ -102,6 +102,16 @@ export function parseMessageUrl(url: string): { channel: string; ts: string } | 
   return { channel, ts };
 }
 
+export function parseListUrl(url: string): { listId: string } | null {
+  const match = url.match(/\/lists\/[A-Z0-9]+\/([A-Z0-9]+)/i);
+  if (!match) {
+    return null;
+  }
+
+  const listId = match[1];
+  return { listId };
+}
+
 async function loadUsers(client: SlackListsClient): Promise<Array<Record<string, unknown>>> {
   const users: Array<Record<string, unknown>> = [];
   let cursor: string | undefined = undefined;

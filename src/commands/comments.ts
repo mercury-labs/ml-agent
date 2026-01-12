@@ -52,7 +52,7 @@ export function registerCommentCommands(program: Command): void {
         }
 
         if (!channel) {
-          const fallback = resolveDefaultChannel();
+          const fallback = resolveDefaultChannel(listId);
           if (fallback) {
             channel = await resolveChannelId(client, fallback);
           }

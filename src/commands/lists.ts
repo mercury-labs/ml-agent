@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 
 import { resolveToken } from "../lib/config";
+import { parseListUrl } from "../lib/resolvers";
 import { SlackListsClient } from "../lib/slack-client";
 import { getGlobalOptions } from "../utils/command";
 import { handleCommandError } from "../utils/errors";
@@ -13,6 +14,23 @@ import { updateSchemaCache } from "../lib/cache";
 
 export function registerListsCommands(program: Command): void {
   const lists = program.command("lists").description("List operations");
+
+  lists
+    .command("id")
+    .description("Extract list ID from a Slack list URL")
+    .argument("<url>", "Slack list URL")
+    .action((url: string, _options, command: Command) => {
+      const globals = getGlobalOptions(command);
+      try {
+        const parsed = parseListUrl(url);
+        if (!parsed) {
+          throw new Error("Unable to parse list ID from URL");
+        }
+        outputJson({ ok: true, list_id: parsed.listId });
+      } catch (error) {
+        handleCommandError(error, globals.verbose);
+      }
+    });
 
   lists
     .description("List accessible lists (if supported by Slack API)")

@@ -30,6 +30,7 @@ export function registerItemsCommands(program: Command): void {
     .option("--assignee <assignee>", "Filter by assignee")
     .option("--archived", "Include archived items", false)
     .option("--limit <limit>", "Maximum items to return")
+    .option("--compact", "Return minimal fields", false)
     .action(async (listId: string, options, command: Command) => {
       const globals = getGlobalOptions(command);
       const client = new SlackListsClient(resolveToken(globals));
@@ -38,7 +39,7 @@ export function registerItemsCommands(program: Command): void {
         const items = await fetchAllItems(client, listId, options.archived, options.limit);
         await syncSchemaCache(listId, items);
         const schemaIndex =
-          options.status || options.assignee
+          options.status || options.assignee || options.compact
             ? await resolveSchemaIndex(client, listId, globals.schema, globals.refreshSchema)
             : undefined;
 
@@ -67,12 +68,17 @@ export function registerItemsCommands(program: Command): void {
           filtered = filtered.filter((item) => matchesAssignee(item, assigneeColumn.id, assigneeId));
         }
 
+        const outputItems = options.compact
+          ? filtered.map((item) => toCompactItem(item, schemaIndex))
+          : filtered;
+
         outputJson({
           ok: true,
           list_id: listId,
           total_count: items.length,
           filtered_count: filtered.length,
-          items: filtered
+          compact: Boolean(options.compact),
+          items: outputItems
         });
       } catch (error) {
         handleCommandError(error, globals.verbose);
@@ -526,6 +532,197 @@ function matchesAssignee(item: Record<string, unknown>, columnId: string, assign
 
 function schemaRequired(flag: string): string {
   return `Schema required for ${flag}. Run 'slack-lists items list <list-id>' to seed the cache (if the list has items), or provide --schema.`;
+}
+
+function toCompactItem(item: Record<string, unknown>, schemaIndex?: SchemaIndex) {
+  const nameField =
+    findFieldByKey(item, "name") ??
+    (schemaIndex ? findField(item, findPrimaryTextColumn(schemaIndex)?.id ?? "") : null);
+  const statusColumn = schemaIndex ? findStatusColumn(schemaIndex) : undefined;
+  const assigneeColumn = schemaIndex ? resolveAssigneeColumn(schemaIndex) : undefined;
+  const priorityColumn = schemaIndex ? findPriorityColumn(schemaIndex) : undefined;
+  const dueColumn = schemaIndex ? resolveDueColumn(schemaIndex) : undefined;
+
+  const statusField =
+    findFieldByKey(item, "status") ??
+    (statusColumn ? findField(item, statusColumn.id) : null);
+  const assigneeField =
+    findFieldByKey(item, "assignee") ??
+    (assigneeColumn ? findField(item, assigneeColumn.id) : null);
+  const priorityField =
+    findFieldByKey(item, "priority") ??
+    (priorityColumn ? findField(item, priorityColumn.id) : null);
+  const dueField =
+    findFieldByKey(item, "date") ??
+    (dueColumn ? findField(item, dueColumn.id) : null);
+  const messageField =
+    (schemaIndex ? findField(item, findColumnByType(schemaIndex, ["message"])?.id ?? "") : null) ??
+    findFieldByKey(item, "message");
+
+  return {
+    id: item.id,
+    list_id: item.list_id,
+    name: extractText(nameField),
+    status: extractSelect(statusField),
+    assignee: extractUsers(assigneeField),
+    priority: extractRating(priorityField),
+    due_date: extractDate(dueField),
+    message: extractMessage(messageField),
+    updated_timestamp: item.updated_timestamp ?? item.updated_ts
+  };
+}
+
+function findFieldByKey(item: Record<string, unknown>, key: string): Record<string, unknown> | null {
+  const fields = item.fields;
+  if (!Array.isArray(fields)) {
+    return null;
+  }
+
+  const target = key.toLowerCase();
+  for (const field of fields) {
+    if (field && typeof field === "object") {
+      const fieldKey = (field as { key?: string }).key;
+      if (typeof fieldKey === "string" && fieldKey.toLowerCase() === target) {
+        return field as Record<string, unknown>;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findStatusColumn(index: SchemaIndex) {
+  return findColumnByKeyOrName(index, ["status", "state"]) ?? findColumnByType(index, ["todo_completed"]);
+}
+
+function findPriorityColumn(index: SchemaIndex) {
+  return findColumnByKeyOrName(index, ["priority"]) ?? findColumnByType(index, ["rating"]);
+}
+
+function extractText(field: Record<string, unknown> | null): string | null {
+  if (!field) {
+    return null;
+  }
+
+  if (typeof field.text === "string" && field.text.trim()) {
+    return field.text;
+  }
+
+  const richText = field.rich_text;
+  if (Array.isArray(richText)) {
+    for (const block of richText) {
+      if (!block || typeof block !== "object") {
+        continue;
+      }
+      const elements = (block as { elements?: unknown }).elements;
+      if (!Array.isArray(elements)) {
+        continue;
+      }
+      for (const element of elements) {
+        if (!element || typeof element !== "object") {
+          continue;
+        }
+        const inner = (element as { elements?: unknown }).elements;
+        if (!Array.isArray(inner)) {
+          continue;
+        }
+        for (const node of inner) {
+          if (node && typeof node === "object" && typeof (node as { text?: unknown }).text === "string") {
+            return String((node as { text?: unknown }).text);
+          }
+        }
+      }
+    }
+  }
+
+  if (typeof field.value === "string") {
+    return field.value;
+  }
+
+  return null;
+}
+
+function extractSelect(field: Record<string, unknown> | null): string | string[] | null {
+  if (!field) {
+    return null;
+  }
+  const select = field.select;
+  if (Array.isArray(select)) {
+    return select.length === 1 ? select[0] : select;
+  }
+  if (typeof field.value === "string") {
+    return field.value;
+  }
+  return null;
+}
+
+function extractUsers(field: Record<string, unknown> | null): string | string[] | null {
+  if (!field) {
+    return null;
+  }
+  const users = field.user;
+  if (Array.isArray(users)) {
+    return users.length === 1 ? users[0] : users;
+  }
+  if (typeof field.value === "string") {
+    return field.value;
+  }
+  return null;
+}
+
+function extractRating(field: Record<string, unknown> | null): number | null {
+  if (!field) {
+    return null;
+  }
+  const rating = field.rating;
+  if (Array.isArray(rating) && rating.length > 0) {
+    return Number(rating[0]);
+  }
+  if (typeof field.value === "number") {
+    return field.value;
+  }
+  if (typeof field.value === "string") {
+    const parsed = Number(field.value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function extractDate(field: Record<string, unknown> | null): string | null {
+  if (!field) {
+    return null;
+  }
+  const date = field.date;
+  if (Array.isArray(date) && date.length > 0) {
+    return String(date[0]);
+  }
+  if (typeof field.value === "string") {
+    return field.value;
+  }
+  return null;
+}
+
+function extractMessage(field: Record<string, unknown> | null): string | null {
+  if (!field) {
+    return null;
+  }
+  const message = field.message;
+  if (Array.isArray(message) && message.length > 0) {
+    const entry = message[0];
+    if (typeof entry === "string") {
+      return entry;
+    }
+    if (entry && typeof entry === "object") {
+      const value = (entry as { value?: unknown }).value;
+      if (typeof value === "string") {
+        return value;
+      }
+    }
+  }
+  if (typeof field.value === "string") {
+    return field.value;
+  }
+  return null;
 }
 
 function findField(item: Record<string, unknown>, columnId: string): Record<string, unknown> | null {
