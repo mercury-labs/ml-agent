@@ -26,6 +26,34 @@ This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) t
 npm install -g slack-lists-cli
 ```
 
+### Local development install (recommended)
+
+If `npm link slack-lists-cli` hangs from another repo, use one of these instead:
+
+Option A (single-step link):
+```bash
+npm link /absolute/path/to/slack-lists-cli
+```
+
+Option B (file dependency):
+```bash
+npm install --save-dev /absolute/path/to/slack-lists-cli
+```
+
+After linking/installing, the bin name is `slack-lists`:
+```bash
+slack-lists help
+# or
+npx slack-lists help
+```
+
+### No-install dev option
+
+You can always run the CLI directly:
+```bash
+node /absolute/path/to/slack-lists-cli/dist/index.js <command>
+```
+
 ## Quickstart (Testing with Slack)
 
 1) Create a Slack app from `slack-app-manifest.yaml`, then install it to your workspace.
@@ -257,3 +285,4 @@ You can also set per-list defaults in `~/.config/slack-lists-cli/config.json`:
 - `npm run build`
 - `npm run dev`
 - `npm run typecheck`
+- `npm run prepare` (auto-builds dist for linking)
