@@ -117,6 +117,7 @@ function getCapabilities() {
           "--assignee <assignee>",
           "--priority <priority>",
           "--status <status>",
+          "--agent-state <state>",
           "--due <date>",
           "--field <key=value|json>"
         ]
@@ -129,6 +130,7 @@ function getCapabilities() {
           "--assignee <assignee>",
           "--priority <priority>",
           "--status <status>",
+          "--agent-state <state>",
           "--due <date>",
           "--field <key=value|json>"
         ]

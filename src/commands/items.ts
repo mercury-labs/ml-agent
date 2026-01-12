@@ -128,6 +128,7 @@ export function registerItemsCommands(program: Command): void {
     .option("--assignee <assignee>", "Assignee")
     .option("--priority <priority>", "Priority")
     .option("--status <status>", "Status")
+    .option("--agent-state <state>", "Agent state (needs_input|in_progress|blocked|ready_for_review|ready_for_test)")
     .option("--due <date>", "Due date (YYYY-MM-DD)")
     .option("--field <field>", "Custom field override", collect, [])
     .action(async (listId: string, options, command: Command) => {
@@ -183,6 +184,18 @@ export function registerItemsCommands(program: Command): void {
             throw new Error("Unable to resolve status column from schema");
           }
           const typed = await buildTypedField(column, options.status, { client });
+          initialFields.push({ column_id: column.id, ...typed });
+        }
+
+        if (options.agentState) {
+          if (!schemaIndex) {
+            throw new Error(schemaRequired("--agent-state"));
+          }
+          const column = resolveAgentStateColumn(schemaIndex);
+          if (!column) {
+            throw new Error("Unable to resolve agent state column from schema");
+          }
+          const typed = await buildTypedField(column, options.agentState, { client });
           initialFields.push({ column_id: column.id, ...typed });
         }
 
@@ -247,6 +260,7 @@ export function registerItemsCommands(program: Command): void {
     .option("--assignee <assignee>", "Assignee")
     .option("--priority <priority>", "Priority")
     .option("--status <status>", "Status")
+    .option("--agent-state <state>", "Agent state (needs_input|in_progress|blocked|ready_for_review|ready_for_test)")
     .option("--due <date>", "Due date (YYYY-MM-DD)")
     .option("--field <field>", "Custom field override", collect, [])
     .action(async (listId: string, itemId: string, options, command: Command) => {
@@ -290,6 +304,18 @@ export function registerItemsCommands(program: Command): void {
             throw new Error("Unable to resolve status column from schema");
           }
           const typed = await buildTypedField(column, options.status, { client });
+          cells.push({ row_id: itemId, column_id: column.id, ...typed });
+        }
+
+        if (options.agentState) {
+          if (!schemaIndex) {
+            throw new Error(schemaRequired("--agent-state"));
+          }
+          const column = resolveAgentStateColumn(schemaIndex);
+          if (!column) {
+            throw new Error("Unable to resolve agent state column from schema");
+          }
+          const typed = await buildTypedField(column, options.agentState, { client });
           cells.push({ row_id: itemId, column_id: column.id, ...typed });
         }
 
@@ -441,6 +467,10 @@ function resolveDueColumn(index: SchemaIndex) {
   );
 }
 
+function resolveAgentStateColumn(index: SchemaIndex) {
+  return findColumnByKeyOrName(index, ["agent_state", "agent state", "agentstatus", "agent_status"]);
+}
+
 function pickSelectColumn(index: SchemaIndex, label: string, keys: string[]) {
   const byKey = findColumnByKeyOrName(index, keys);
   if (byKey) {
@@ -552,6 +582,9 @@ function toCompactItem(item: Record<string, unknown>, schemaIndex?: SchemaIndex)
   const priorityField =
     findFieldByKey(item, "priority") ??
     (priorityColumn ? findField(item, priorityColumn.id) : null);
+  const agentStateField =
+    findFieldByKey(item, "agent_state") ??
+    (schemaIndex ? findField(item, resolveAgentStateColumn(schemaIndex)?.id ?? "") : null);
   const dueField =
     findFieldByKey(item, "date") ??
     (dueColumn ? findField(item, dueColumn.id) : null);
@@ -566,6 +599,7 @@ function toCompactItem(item: Record<string, unknown>, schemaIndex?: SchemaIndex)
     status: extractSelect(statusField),
     assignee: extractUsers(assigneeField),
     priority: extractRating(priorityField),
+    agent_state: extractSelect(agentStateField),
     due_date: extractDate(dueField),
     message: extractMessage(messageField),
     updated_timestamp: item.updated_timestamp ?? item.updated_ts

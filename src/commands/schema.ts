@@ -101,6 +101,9 @@ function inferFlag(column: CompactColumn): string | null {
   if (key === "status") {
     return "--status";
   }
+  if (key === "agent_state" || name === "agent state") {
+    return "--agent-state";
+  }
   if (key === "priority") {
     return "--priority";
   }

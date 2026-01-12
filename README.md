@@ -167,7 +167,9 @@ slack-lists items list <list-id>
 slack-lists items list <list-id> --compact
 slack-lists items get <list-id> <item-id>
 slack-lists items create <list-id> --name "Task" --priority high
+slack-lists items create <list-id> --name "Task" --agent-state needs_input
 slack-lists items update <list-id> <item-id> --status completed
+slack-lists items update <list-id> <item-id> --agent-state ready_for_test
 slack-lists items update <list-id> <item-id> --field "ColumnKey=value"
 ```
 
@@ -217,6 +219,24 @@ Provide a schema file when the CLI can’t infer one (e.g., empty lists). It sho
     }
   ]
 }
+```
+
+## Agent State (recommended)
+
+For simple agent workflows, add a select field to your list:
+
+- **Field name**: `Agent State`
+- **Field key**: `agent_state`
+- **Values**:
+  - `needs_input`
+  - `in_progress`
+  - `blocked`
+  - `ready_for_review`
+  - `ready_for_test`
+
+Once present, the CLI exposes:
+```
+slack-lists items update <list-id> <item-id> --agent-state needs_input
 ```
 
 ## Output Format
@@ -295,6 +315,7 @@ To clean up duplicate threads created by accident:
 - `slack-lists items list <list-id>`
 - `slack-lists items list <list-id> --compact`
 - `slack-lists items create <list-id> --name "Task" --priority high`
+- `slack-lists items update <list-id> <item-id> --agent-state needs_input`
 - `slack-lists items update <list-id> <item-id> --status completed`
 - `slack-lists comments <list-id> <item-id> --compact`
 - `slack-lists evidence upload <list-id> <item-id> ./file.png`
