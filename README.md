@@ -74,24 +74,13 @@ npm install -g slack-lists-cli
 - `groups:read`
 - `files:write`
 
-## Slack App Manifest (for easy testing/sharing)
-
-A ready-to-use manifest is included at `slack-app-manifest.yaml` (JSON format; valid to paste into the manifest editor).
-
-Quick steps:
-- Create a new Slack app from a manifest and paste the contents of `slack-app-manifest.yaml`.
-- Install the app to your workspace and copy the bot token.
-- Export the token: `export SLACK_TOKEN=...`
-
-If you do not need private channel resolution, you can remove `groups:read` from the manifest.
-If you want token rotation, add OAuth redirect URLs and set `token_rotation_enabled` to true.
-
 ## Notes
 
 - Slack does **not** expose a list discovery API as of January 2026. `slack-lists lists` will return an informative error unless Slack adds this method.
 - Items create/update require `column_id` values. Provide a schema file via `--schema` or `SLACK_LIST_SCHEMA_PATH`.
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - `lists info` will try `slackLists.info`; if unavailable, it infers schema from existing items (limited; no select options).
+- Schema cache is updated in the background on list/item reads (best-effort) to keep columns in sync.
 
 ## Help (LLM-friendly)
 
