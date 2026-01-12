@@ -110,6 +110,7 @@ slack-lists auth status
 ```
 slack-lists lists
 slack-lists lists info <list-id>
+slack-lists schema <list-id>
 slack-lists lists export <list-id> --out ./export.bin
 ```
 
@@ -203,10 +204,12 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - Cache is updated automatically on list/item reads; for empty lists, pass `--schema`.
 - Use `--refresh-schema` if columns/options change.
+- Use `slack-lists schema <list-id>` for compact, token-efficient schema output.
 
 ### Common commands
 - `slack-lists auth status`
 - `slack-lists lists info <list-id>`
+- `slack-lists schema <list-id>`
 - `slack-lists items list <list-id>`
 - `slack-lists items create <list-id> --name "Task" --priority high`
 - `slack-lists items update <list-id> <item-id> --status completed`

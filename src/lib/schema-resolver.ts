@@ -48,6 +48,31 @@ export async function resolveSchemaIndex(
       limit: 100
     });
     const items = (itemsResult as { items?: Record<string, unknown>[] }).items ?? [];
+
+    const firstItemId = items[0]?.id;
+    if (firstItemId) {
+      try {
+        const infoResult = await client.call("slackLists.items.info", {
+          list_id: listId,
+          id: firstItemId
+        });
+        const list = (infoResult as { list?: { list_metadata?: Record<string, unknown>; id?: string } }).list;
+        if (list?.list_metadata) {
+          const schema = normalizeSchema({
+            list_metadata: list.list_metadata,
+            list_id: list.id ?? listId
+          });
+          await saveSchemaCache(listId, schema);
+          return buildSchemaIndex(schema);
+        }
+      } catch (error) {
+        const slackError = (error as { data?: { error?: string } })?.data?.error;
+        if (slackError && slackError !== "unknown_method") {
+          throw error;
+        }
+      }
+    }
+
     const inferred = inferSchemaFromItems(listId, items);
     if (inferred.columns.length === 0) {
       return undefined;

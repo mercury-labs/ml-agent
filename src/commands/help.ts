@@ -55,6 +55,12 @@ function getCapabilities() {
         options: []
       },
       {
+        command: "schema <list-id>",
+        description: "Compact schema output for agentic updates",
+        args: ["list-id"],
+        options: []
+      },
+      {
         command: "lists export <list-id>",
         description: "Export list via download job",
         args: ["list-id"],
