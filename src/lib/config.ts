@@ -32,3 +32,7 @@ export function resolveToken(options: TokenOptions = {}): string {
 export function resolveSchemaPath(cliPath?: string): string | undefined {
   return cliPath ?? process.env.SLACK_LIST_SCHEMA_PATH;
 }
+
+export function resolveDefaultChannel(): string | undefined {
+  return process.env.SLACK_LIST_DEFAULT_CHANNEL;
+}

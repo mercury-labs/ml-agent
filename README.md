@@ -53,6 +53,7 @@ npm install -g slack-lists-cli
 - `SLACK_TOKEN` (default)
 - `SLACK_BOT_TOKEN` or `SLACK_USER_TOKEN` (optional)
 - `SLACK_LIST_SCHEMA_PATH` (optional default schema file)
+- `SLACK_LIST_DEFAULT_CHANNEL` (optional default channel for comment threads)
 - `.env.local` or `.env` files are loaded automatically if present
 
 ## Global Options
@@ -133,6 +134,9 @@ slack-lists ask <channel> "Question text?" --user @someone
 slack-lists post <channel> "Message text"
 ```
 
+If a list item doesn’t have a Message link yet, `SLACK_LIST_DEFAULT_CHANNEL` is used to
+create a thread and attach the permalink automatically.
+
 ### Evidence
 
 ```
@@ -199,12 +203,17 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 
 ### Required env
 - `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)
+- `SLACK_LIST_DEFAULT_CHANNEL` (optional, channel ID or #name for auto-threading)
 
 ### Schema handling
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - Cache is updated automatically on list/item reads; for empty lists, pass `--schema`.
 - Use `--refresh-schema` if columns/options change.
 - Use `slack-lists schema <list-id>` for compact, token-efficient schema output.
+
+### Default channel for comments
+- Set `SLACK_LIST_DEFAULT_CHANNEL` (e.g. `#team-channel` or `C12345678`) so the CLI can
+  auto-create a thread and store its permalink when you post the first comment on an item.
 
 ### Common commands
 - `slack-lists auth status`

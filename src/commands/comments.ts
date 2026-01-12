@@ -1,6 +1,8 @@
 import { Command } from "commander";
 
-import { resolveToken } from "../lib/config";
+import { resolveDefaultChannel, resolveToken } from "../lib/config";
+import { findColumnByType } from "../lib/schema";
+import { resolveSchemaIndex } from "../lib/schema-resolver";
 import { parseMessageUrl, resolveChannelId, resolveUserId } from "../lib/resolvers";
 import { SlackListsClient } from "../lib/slack-client";
 import { getGlobalOptions } from "../utils/command";
@@ -36,21 +38,74 @@ export function registerCommentCommands(program: Command): void {
           }
         }
 
+        let itemResult: Record<string, unknown> | null = null;
         if (!channel || !threadTs) {
-          const itemResult = await client.call("slackLists.items.info", {
+          itemResult = (await client.call("slackLists.items.info", {
             list_id: listId,
             id: itemId
-          });
-          const thread = extractThreadFromItem(itemResult as unknown as Record<string, unknown>);
+          })) as Record<string, unknown>;
+          const thread = extractThreadFromItem(itemResult);
           if (thread) {
             channel = channel ?? thread.channel;
             threadTs = threadTs ?? thread.ts;
           }
         }
 
+        if (!channel) {
+          const fallback = resolveDefaultChannel();
+          if (fallback) {
+            channel = await resolveChannelId(client, fallback);
+          }
+        }
+
+        if (!threadTs && channel) {
+          const details = itemResult ?? ((await client.call("slackLists.items.info", {
+            list_id: listId,
+            id: itemId
+          })) as Record<string, unknown>);
+
+          const rootText = buildThreadRootText(details, listId, itemId);
+          const root = await client.postMessage({ channel, text: rootText });
+          const rootTs = (root as { ts?: string }).ts;
+          if (!rootTs) {
+            throw new Error("Unable to create thread root message");
+          }
+
+          const permalinkResult = await client.call("chat.getPermalink", {
+            channel,
+            message_ts: rootTs
+          });
+          const permalink = (permalinkResult as { permalink?: string }).permalink;
+          if (!permalink) {
+            throw new Error("Unable to fetch permalink for thread root");
+          }
+
+          const schemaIndex = await resolveSchemaIndex(
+            client,
+            listId,
+            globals.schema,
+            globals.refreshSchema
+          );
+          const messageColumn = schemaIndex ? findColumnByType(schemaIndex, ["message"]) : undefined;
+          if (messageColumn) {
+            await client.call("slackLists.items.update", {
+              list_id: listId,
+              cells: [
+                {
+                  row_id: itemId,
+                  column_id: messageColumn.id,
+                  message: [permalink]
+                }
+              ]
+            });
+          }
+
+          threadTs = rootTs;
+        }
+
         if (!channel || !threadTs) {
           throw new Error(
-            "Unable to infer thread. Provide --channel and --thread-ts or --message-url."
+            "Unable to infer thread. Provide --channel and --thread-ts or --message-url, or set SLACK_LIST_DEFAULT_CHANNEL."
           );
         }
 
@@ -245,4 +300,46 @@ function extractThreadFromItem(itemResult: Record<string, unknown>): { channel: 
   }
 
   return null;
+}
+
+function buildThreadRootText(itemResult: Record<string, unknown>, listId: string, itemId: string): string {
+  const list = (itemResult as { list?: Record<string, unknown> }).list ?? {};
+  const listTitle =
+    (typeof list.title === "string" && list.title.trim()) ||
+    (typeof list.name === "string" && list.name.trim()) ||
+    listId;
+
+  const item =
+    (itemResult as { item?: Record<string, unknown>; record?: Record<string, unknown> }).item ??
+    (itemResult as { record?: Record<string, unknown> }).record ??
+    {};
+
+  const fields = Array.isArray((item as { fields?: unknown }).fields)
+    ? ((item as { fields?: unknown }).fields as Record<string, unknown>[])
+    : [];
+
+  let title = "";
+  for (const field of fields) {
+    if (field && typeof field === "object" && (field as { key?: string }).key === "name") {
+      title = (field as { text?: string }).text ?? "";
+      if (title) {
+        break;
+      }
+    }
+  }
+
+  if (!title) {
+    for (const field of fields) {
+      if (field && typeof field === "object") {
+        const text = (field as { text?: string }).text;
+        if (text) {
+          title = text;
+          break;
+        }
+      }
+    }
+  }
+
+  const itemLabel = title ? `"${title}"` : itemId;
+  return `Thread for ${listTitle} item ${itemLabel}`;
 }

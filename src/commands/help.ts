@@ -28,7 +28,11 @@ function getCapabilities() {
       { name: "SLACK_TOKEN", description: "Default token" },
       { name: "SLACK_BOT_TOKEN", description: "Optional bot token" },
       { name: "SLACK_USER_TOKEN", description: "Optional user token (used with --as-user)" },
-      { name: "SLACK_LIST_SCHEMA_PATH", description: "Default schema JSON path" }
+      { name: "SLACK_LIST_SCHEMA_PATH", description: "Default schema JSON path" },
+      {
+        name: "SLACK_LIST_DEFAULT_CHANNEL",
+        description: "Fallback channel for comment threads (ID or #name)"
+      }
     ],
     schema_cache: {
       path: "~/.config/slack-lists-cli/schemas/<list-id>.json",
