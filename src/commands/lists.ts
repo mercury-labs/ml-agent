@@ -9,6 +9,7 @@ import { getGlobalOptions } from "../utils/command";
 import { handleCommandError } from "../utils/errors";
 import { outputJson } from "../utils/output";
 import { inferSchemaFromItems } from "../lib/schema";
+import { updateSchemaCache } from "../lib/cache";
 
 export function registerListsCommands(program: Command): void {
   const lists = program.command("lists").description("List operations");
@@ -57,9 +58,10 @@ export function registerListsCommands(program: Command): void {
                 limit: 1
               });
               const items = (itemsResult as { items?: unknown[] }).items ?? [];
-              const inferred = inferSchemaFromItems(listId, items);
-              outputJson({
-                ok: true,
+            const inferred = inferSchemaFromItems(listId, items);
+            await updateSchemaCache(listId, inferred);
+            outputJson({
+              ok: true,
                 list_id: listId,
                 inferred_schema: inferred,
                 note:

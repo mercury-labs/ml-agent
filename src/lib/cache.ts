@@ -3,6 +3,7 @@ import path from "path";
 import os from "os";
 
 import { ListSchema } from "./types";
+import { mergeSchemas } from "./schema";
 
 export function getCacheDir(): string {
   const base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
@@ -31,4 +32,11 @@ export async function saveSchemaCache(listId: string, schema: ListSchema): Promi
   const filePath = getSchemaCachePath(listId);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(schema, null, 2), "utf-8");
+}
+
+export async function updateSchemaCache(listId: string, schema: ListSchema): Promise<ListSchema> {
+  const cached = await loadCachedSchema(listId);
+  const merged = mergeSchemas(cached, schema);
+  await saveSchemaCache(listId, merged);
+  return merged;
 }

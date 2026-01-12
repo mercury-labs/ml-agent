@@ -144,6 +144,42 @@ export function inferSchemaFromItems(listId: string, items: unknown[]): ListSche
   return { list_id: listId, columns };
 }
 
+export function mergeSchemas(base: ListSchema | null, incoming: ListSchema): ListSchema {
+  if (!base) {
+    return incoming;
+  }
+
+  const merged: ListColumn[] = base.columns.map((column) => ({ ...column }));
+  const index = new Map(merged.map((column) => [column.id, column]));
+
+  for (const column of incoming.columns) {
+    const existing = index.get(column.id);
+    if (!existing) {
+      merged.push({ ...column });
+      index.set(column.id, column);
+      continue;
+    }
+
+    if (!existing.key && column.key) {
+      existing.key = column.key;
+    }
+
+    if ((!existing.name || existing.name === existing.id) && column.name) {
+      existing.name = column.name;
+    }
+
+    if (existing.type === "unknown" && column.type !== "unknown") {
+      existing.type = column.type;
+    }
+
+    if (!existing.options && column.options) {
+      existing.options = column.options;
+    }
+  }
+
+  return { list_id: incoming.list_id || base.list_id, columns: merged };
+}
+
 function buildSchemaFromRaw(listId: unknown, rawColumns: unknown): ListSchema {
   if (!Array.isArray(rawColumns)) {
     throw new Error("Schema columns must be an array");

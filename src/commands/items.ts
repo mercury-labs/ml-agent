@@ -9,6 +9,8 @@ import {
   resolveColumn,
   SchemaIndex
 } from "../lib/schema";
+import { inferSchemaFromItems } from "../lib/schema";
+import { updateSchemaCache } from "../lib/cache";
 import { resolveSchemaIndex } from "../lib/schema-resolver";
 import { SlackListsClient } from "../lib/slack-client";
 import { resolveUserId } from "../lib/resolvers";
@@ -42,6 +44,7 @@ export function registerItemsCommands(program: Command): void {
         }
 
         const items = await fetchAllItems(client, listId, options.archived, options.limit);
+        await syncSchemaCache(listId, items);
         let filtered = items;
 
         if (options.status && schemaIndex) {
@@ -85,6 +88,10 @@ export function registerItemsCommands(program: Command): void {
 
       try {
         const result = await client.call("slackLists.items.info", { list_id: listId, item_id: itemId });
+        const item = (result as { item?: Record<string, unknown> }).item;
+        if (item) {
+          await syncSchemaCache(listId, [item]);
+        }
         outputJson(result);
       } catch (error) {
         handleCommandError(error, globals.verbose);
@@ -337,6 +344,15 @@ export function registerItemsCommands(program: Command): void {
 
 function collect(value: string, previous: string[]): string[] {
   return previous.concat([value]);
+}
+
+async function syncSchemaCache(listId: string, items: Record<string, unknown>[]): Promise<void> {
+  try {
+    const inferred = inferSchemaFromItems(listId, items);
+    await updateSchemaCache(listId, inferred);
+  } catch {
+    // Best-effort cache update; do not fail commands if schema sync fails.
+  }
 }
 
 async function fetchAllItems(
