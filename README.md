@@ -26,6 +26,28 @@ This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) t
 npm install -g slack-lists-cli
 ```
 
+## Quickstart (Testing with Slack)
+
+1) Create a Slack app from `slack-app-manifest.yaml`, then install it to your workspace.
+2) Copy the Bot User OAuth Token (`xoxb-...`) and place it in `.env.local`:
+   ```
+   SLACK_TOKEN=xoxb-...
+   ```
+3) Invite the bot to the channel where the list is shared:
+   ```
+   /invite @lists-cli
+   ```
+4) If you see `list_not_found`, explicitly grant list access to the channel:
+   ```
+   node -e 'const {WebClient}=require("@slack/web-api");const c=new WebClient(process.env.SLACK_TOKEN);c.apiCall("slackLists.access.set",{list_id:"FXXXX",access_level:"write",channel_ids:["CXXXX"]}).then(r=>console.log(JSON.stringify(r,null,2))).catch(e=>console.error(e));'
+   ```
+5) Verify the CLI:
+   ```
+   node dist/index.js auth status
+   node dist/index.js lists info <list-id>
+   node dist/index.js items list <list-id>
+   ```
+
 ## Environment
 
 - `SLACK_TOKEN` (default)
