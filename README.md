@@ -77,9 +77,10 @@ npm install -g slack-lists-cli
 ## Notes
 
 - Slack does **not** expose a list discovery API as of January 2026. `slack-lists lists` will return an informative error unless Slack adds this method.
-- Items create/update require `column_id` values. Provide a schema file via `--schema` or `SLACK_LIST_SCHEMA_PATH`.
+- Items create/update use schema to map friendly flags (`--name`, `--status`, etc). The CLI auto-caches schemas from list/item reads.
+- If a list has no items (or columns never populated), Slack won’t expose those columns. Provide `--schema` or use `--field` with `column_id` in that case.
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
-- `lists info` will try `slackLists.info`; if unavailable, it infers schema from existing items (limited; no select options).
+- `lists info` will try `slackLists.info`; if unavailable, it infers schema from existing items (limited; no select options or empty columns).
 - Schema cache is updated in the background on list/item reads (best-effort) to keep columns in sync.
 
 ## Help (LLM-friendly)
@@ -135,7 +136,7 @@ slack-lists evidence list <list-id> <item-id>
 
 ## Schema File Format
 
-The schema file should contain a `schema` or `columns` array (e.g. from Slack list metadata) with `id`, `key`, `name`, `type`, and `options.choices` for selects. Example:
+Provide a schema file when the CLI can’t infer one (e.g., empty lists). It should contain a `schema` or `columns` array (from Slack list metadata or exports) with `id`, `key`, `name`, `type`, and `options.choices` for selects. Example:
 
 ```json
 {
@@ -193,6 +194,7 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 
 ### Schema handling
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
+- Cache is updated automatically on list/item reads; for empty lists, pass `--schema`.
 - Use `--refresh-schema` if columns/options change.
 
 ### Common commands

@@ -32,7 +32,8 @@ function getCapabilities() {
     ],
     schema_cache: {
       path: "~/.config/slack-lists-cli/schemas/<list-id>.json",
-      description: "Cached schema per list ID (uses $XDG_CONFIG_HOME when set)"
+      description:
+        "Cached schema per list ID (populated from list/item reads; uses $XDG_CONFIG_HOME when set)"
     },
     commands: [
       {
@@ -49,7 +50,7 @@ function getCapabilities() {
       },
       {
         command: "lists info <list-id>",
-        description: "Fetch list schema (falls back to inference if needed)",
+        description: "Fetch list schema (falls back to inference when list metadata is unavailable)",
         args: ["list-id"],
         options: []
       },
@@ -61,7 +62,7 @@ function getCapabilities() {
       },
       {
         command: "items list <list-id>",
-        description: "List items (filters require schema)",
+        description: "List items (filters require schema; cache syncs from reads)",
         args: ["list-id"],
         options: ["--status <status>", "--assignee <assignee>", "--archived", "--limit <limit>"]
       },
@@ -73,7 +74,7 @@ function getCapabilities() {
       },
       {
         command: "items create <list-id>",
-        description: "Create item (requires schema for friendly flags)",
+        description: "Create item (auto-syncs schema; empty lists still need --schema)",
         args: ["list-id"],
         options: [
           "--name <name>",
