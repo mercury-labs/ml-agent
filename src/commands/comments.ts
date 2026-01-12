@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { resolveDefaultChannel, resolveToken } from "../lib/config";
 import { findColumnByType } from "../lib/schema";
 import { resolveSchemaIndex } from "../lib/schema-resolver";
+import { getThreadEntry, setThreadEntry } from "../lib/thread-map";
 import { parseMessageUrl, resolveChannelId, resolveUserId } from "../lib/resolvers";
 import { SlackListsClient } from "../lib/slack-client";
 import { getGlobalOptions } from "../utils/command";
@@ -27,14 +28,29 @@ export function registerCommentCommands(program: Command): void {
         let channel = options.channel ? await resolveChannelId(client, options.channel) : undefined;
         let threadTs = options.threadTs as string | undefined;
 
+        let messageUrl = options.messageUrl as string | undefined;
         if (!channel || !threadTs) {
-          const messageUrl = options.messageUrl as string | undefined;
           if (messageUrl) {
             const parsed = parseMessageUrl(messageUrl);
             if (parsed) {
               channel = channel ?? parsed.channel;
               threadTs = threadTs ?? parsed.ts;
             }
+          }
+        }
+
+        if (!channel || !threadTs) {
+          const stored = await getThreadEntry(listId, itemId);
+          if (stored?.permalink) {
+            const parsed = parseMessageUrl(stored.permalink);
+            if (parsed) {
+              channel = channel ?? parsed.channel;
+              threadTs = threadTs ?? parsed.ts;
+            }
+          }
+          if (stored?.channel && stored?.ts) {
+            channel = channel ?? stored.channel;
+            threadTs = threadTs ?? stored.ts;
           }
         }
 
@@ -100,6 +116,14 @@ export function registerCommentCommands(program: Command): void {
             });
           }
 
+          await setThreadEntry(listId, itemId, {
+            permalink,
+            channel,
+            ts: rootTs
+          });
+
+          messageUrl = permalink;
+
           threadTs = rootTs;
         }
 
@@ -114,6 +138,14 @@ export function registerCommentCommands(program: Command): void {
           text,
           thread_ts: threadTs
         });
+
+        if (messageUrl) {
+          await setThreadEntry(listId, itemId, {
+            permalink: messageUrl,
+            channel,
+            ts: threadTs
+          });
+        }
 
         outputJson(result);
       } catch (error) {
@@ -139,8 +171,8 @@ export function registerCommentCommands(program: Command): void {
         let channel = options.channel ? await resolveChannelId(client, options.channel) : undefined;
         let threadTs = options.threadTs as string | undefined;
 
+        let messageUrl = options.messageUrl as string | undefined;
         if (!channel || !threadTs) {
-          const messageUrl = options.messageUrl as string | undefined;
           if (messageUrl) {
             const parsed = parseMessageUrl(messageUrl);
             if (parsed) {
@@ -159,6 +191,7 @@ export function registerCommentCommands(program: Command): void {
           if (thread) {
             channel = channel ?? thread.channel;
             threadTs = threadTs ?? thread.ts;
+            messageUrl = messageUrl ?? thread.permalink;
           }
         }
 
@@ -171,6 +204,21 @@ export function registerCommentCommands(program: Command): void {
         const limit = Number(options.limit);
         if (!Number.isFinite(limit) || limit <= 0) {
           throw new Error("--limit must be a positive number");
+        }
+
+        if (!channel || !threadTs) {
+          const stored = await getThreadEntry(listId, itemId);
+          if (stored?.permalink) {
+            const parsed = parseMessageUrl(stored.permalink);
+            if (parsed) {
+              channel = channel ?? parsed.channel;
+              threadTs = threadTs ?? parsed.ts;
+            }
+          }
+          if (stored?.channel && stored?.ts) {
+            channel = channel ?? stored.channel;
+            threadTs = threadTs ?? stored.ts;
+          }
         }
 
         const messages: Array<Record<string, unknown>> = [];
@@ -207,6 +255,14 @@ export function registerCommentCommands(program: Command): void {
               thread_ts: message.thread_ts
             }))
           : trimmed;
+
+        if (messageUrl && channel && threadTs) {
+          await setThreadEntry(listId, itemId, {
+            permalink: messageUrl,
+            channel,
+            ts: threadTs
+          });
+        }
 
         outputJson({
           ok: true,
@@ -260,7 +316,7 @@ export function registerCommentCommands(program: Command): void {
     });
 }
 
-function extractThreadFromItem(itemResult: Record<string, unknown>): { channel: string; ts: string } | null {
+function extractThreadFromItem(itemResult: Record<string, unknown>): { channel: string; ts: string; permalink?: string } | null {
   const item = (itemResult as { item?: Record<string, unknown>; record?: Record<string, unknown> }).item ??
     (itemResult as { record?: Record<string, unknown> }).record;
   if (!item) {
@@ -281,18 +337,22 @@ function extractThreadFromItem(itemResult: Record<string, unknown>): { channel: 
       if (typeof entry === "string") {
         const parsed = parseMessageUrl(entry);
         if (parsed) {
-          return parsed;
+          return { ...parsed, permalink: entry };
         }
       }
       if (entry && typeof entry === "object") {
         const record = entry as { value?: unknown; channel_id?: unknown; ts?: unknown };
         if (record.channel_id && record.ts) {
-          return { channel: String(record.channel_id), ts: String(record.ts) };
+          return {
+            channel: String(record.channel_id),
+            ts: String(record.ts),
+            permalink: typeof record.value === "string" ? record.value : undefined
+          };
         }
         if (record.value) {
           const parsed = parseMessageUrl(String(record.value));
           if (parsed) {
-            return parsed;
+            return { ...parsed, permalink: String(record.value) };
           }
         }
       }

@@ -83,6 +83,7 @@ node /absolute/path/to/slack-lists-cli/dist/index.js <command>
 - `SLACK_LIST_SCHEMA_PATH` (optional default schema file)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional default channel for comment threads)
 - `SLACK_LIST_CONFIG_PATH` (optional path to config.json for per-list defaults)
+- `SLACK_LIST_THREAD_MAP_PATH` (optional path to threads.json for item → thread mapping)
 - `.env.local` or `.env` files are loaded automatically if present
 
 ## Global Options
@@ -169,6 +170,8 @@ slack-lists items update <list-id> <item-id> --field "ColumnKey=value"
 ```
 slack-lists comment <list-id> <item-id> "Comment text" --message-url <url>
 slack-lists comments <list-id> <item-id> --compact
+slack-lists threads set <list-id> <item-id> --message-url <url>
+slack-lists threads get <list-id> <item-id>
 slack-lists ask <channel> "Question text?" --user @someone
 slack-lists post <channel> "Message text"
 ```
@@ -244,6 +247,7 @@ You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. I
 - `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional, channel ID or #name for auto-threading)
 - `SLACK_LIST_CONFIG_PATH` (optional config.json for per-list defaults)
+- `SLACK_LIST_THREAD_MAP_PATH` (optional threads.json for item → thread mapping)
 
 ### Schema handling
 - The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
@@ -265,6 +269,9 @@ You can also set per-list defaults in `~/.config/slack-lists-cli/config.json`:
   }
 }
 ```
+
+Thread mappings are stored in `~/.config/slack-lists-cli/threads.json` and can be managed
+via `slack-lists threads set/get`.
 
 ### Common commands
 - `slack-lists auth status`

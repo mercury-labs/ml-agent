@@ -36,6 +36,10 @@ function getCapabilities() {
       {
         name: "SLACK_LIST_CONFIG_PATH",
         description: "Optional path to config.json (per-list defaults)"
+      },
+      {
+        name: "SLACK_LIST_THREAD_MAP_PATH",
+        description: "Optional path to threads.json (item thread mapping)"
       }
     ],
     schema_cache: {
@@ -146,6 +150,18 @@ function getCapabilities() {
         description: "Fetch item comment thread (requires history scopes)",
         args: ["list-id", "item-id"],
         options: ["--channel <channel>", "--thread-ts <ts>", "--message-url <url>", "--limit <count>", "--compact"]
+      },
+      {
+        command: "threads get <list-id> <item-id>",
+        description: "Get stored thread mapping for an item",
+        args: ["list-id", "item-id"],
+        options: []
+      },
+      {
+        command: "threads set <list-id> <item-id>",
+        description: "Store thread mapping for an item",
+        args: ["list-id", "item-id"],
+        options: ["--message-url <url>", "--channel <channel>", "--thread-ts <ts>"]
       },
       {
         command: "ask <channel> <text>",

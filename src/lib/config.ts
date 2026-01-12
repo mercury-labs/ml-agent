@@ -57,6 +57,15 @@ export function resolveDefaultChannel(listId?: string): string | undefined {
   return config?.default_channel;
 }
 
+export function resolveThreadMapPath(): string {
+  if (process.env.SLACK_LIST_THREAD_MAP_PATH) {
+    return process.env.SLACK_LIST_THREAD_MAP_PATH;
+  }
+
+  const base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+  return path.join(base, "slack-lists-cli", "threads.json");
+}
+
 function loadConfig(): CliConfig | null {
   if (cachedConfig !== undefined) {
     return cachedConfig;
