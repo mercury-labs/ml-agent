@@ -53,8 +53,14 @@ export async function buildTypedField(
     case "todo_completed":
       return { checkbox: parseBoolean(rawValue) };
     case "number":
-    case "currency":
-      return { number: parseNumber(rawValue) };
+    case "currency": {
+      const num = parseNumber(rawValue);
+      return { number: [num] };
+    }
+    case "rating": {
+      const num = parseNumber(rawValue);
+      return { rating: [num] };
+    }
     case "link":
       return { link: [buildLinkValue(rawValue)] };
     case "attachment":

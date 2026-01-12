@@ -2,6 +2,7 @@ export type ColumnType =
   | "text"
   | "rich_text"
   | "number"
+  | "rating"
   | "date"
   | "user"
   | "channel"
