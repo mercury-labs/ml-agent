@@ -1,109 +1,149 @@
-# slack-lists-cli-llm
+# slack-lists-cli
 
-A CLI for interacting with the [Slack Lists API](https://docs.slack.dev/surfaces/lists/) — designed and optimized for LLM coding agents.
+CLI for agentic coding workflows using Slack Lists. Commands return JSON for agent consumption.
 
 ## Why This Exists
 
-This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) to interact with Slack Lists for task management, status updates, and team communication. Unlike general-purpose Slack tools, every design decision prioritizes machine readability and agent workflows.
+This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) to interact with Slack Lists for task management, status updates, and evidence tracking. Unlike general-purpose Slack tools, every design decision prioritizes machine readability and agent workflows.
 
-## Optimized for Coding Agents
+## Design Principles for Agentic Coding
 
-| Feature | Why It Matters for Agents |
-|---------|---------------------------|
-| **JSON-only output** | All commands return structured JSON — no human-formatted tables or colored output that breaks parsing |
-| **Predictable error format** | Errors return `{"ok": false, "error": "...", "details": {...}}` — agents can programmatically handle failures |
-| **Explicit IDs over names** | Commands accept and return Slack IDs to avoid ambiguity and resolution failures |
-| **No interactive prompts** | Every command is fully non-interactive — no confirmation dialogs or input prompts |
-| **Minimal dependencies** | Fast startup time for frequent invocations in agent loops |
+- JSON-only output with stable shapes for parsing.
+- Predictable error format: `{"ok": false, "error": "...", "details": {...}}` on stderr with exit code 1.
+- No interactive prompts or confirmations.
+- Favors Slack IDs (stable references) over display names.
+- Minimal dependencies for fast startup in agent loops.
+
+## Requirements
+
+- Node.js >= 18
+- Slack token with lists scopes
+- Paid Slack workspace
 
 ## Installation
 
 ```bash
-npm install -g slack-lists-cli-llm
+npm install -g slack-lists-cli
 ```
 
-## Authentication
+## Environment
 
-Set your Slack token as an environment variable:
+- `SLACK_TOKEN` (default)
+- `SLACK_BOT_TOKEN` or `SLACK_USER_TOKEN` (optional)
+- `SLACK_LIST_SCHEMA_PATH` (optional default schema file)
 
-```bash
-export SLACK_TOKEN=xoxb-your-bot-token
+## Global Options
+
+- `--token <token>` override token
+- `--as-user` use `SLACK_USER_TOKEN`
+- `--schema <path>` schema JSON file
+- `--refresh-schema` bypass cached schema and refresh from Slack
+- `--verbose` include Slack error payloads
+
+## Required OAuth Scopes
+
+- `lists:read`
+- `lists:write`
+- `chat:write`
+- `users:read`
+- `channels:read`
+- `files:write`
+
+## Notes
+
+- Slack does **not** expose a list discovery API as of January 2026. `slack-lists lists` will return an informative error unless Slack adds this method.
+- Items create/update require `column_id` values. Provide a schema file via `--schema` or `SLACK_LIST_SCHEMA_PATH`.
+- The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
+- `lists info` will try `slackLists.info`; if unavailable, it infers schema from existing items (limited; no select options).
+
+## Help (LLM-friendly)
+
+```
+slack-lists help
 ```
 
-Verify authentication:
+This returns JSON describing all commands, options, and environment variables for agentic coding.
 
-```bash
+## Usage
+
+### Auth
+
+```
 slack-lists auth status
-# {"ok": true, "user_id": "U...", "team_id": "T...", "team": "workspace-name"}
 ```
 
-### Required Scopes
+### Lists
 
-Your Slack app needs these OAuth scopes:
-
-- `lists:read` — Read lists and items
-- `lists:write` — Create/update/delete items
-- `chat:write` — Post messages (for comments)
-- `users:read` — Resolve user references
-- `files:write` — Upload file attachments
-
-## Commands
-
-### List Operations
-
-```bash
-# List all accessible lists
+```
 slack-lists lists
-
-# Get list details including schema (columns, field types)
 slack-lists lists info <list-id>
-
-# Export list data
-slack-lists lists export <list-id> --format json
+slack-lists lists export <list-id> --out ./export.bin
 ```
 
-### Item Operations
+### Items
 
-```bash
-# List items (with optional filters)
+```
 slack-lists items list <list-id>
-slack-lists items list <list-id> --filter "status=pending"
-
-# Get single item
 slack-lists items get <list-id> <item-id>
-
-# Create item (requires schema-aware field mapping)
-slack-lists items create <list-id> --cells '{"column_id": {"value": "..."}}'
-
-# Update item
-slack-lists items update <list-id> <item-id> --cells '{"column_id": {"value": "..."}}'
-
-# Delete item
-slack-lists items delete <list-id> <item-id>
+slack-lists items create <list-id> --name "Task" --priority high
+slack-lists items update <list-id> <item-id> --status completed
+slack-lists items update <list-id> <item-id> --field "ColumnKey=value"
 ```
 
-### Schema Discovery
+### Comments & Messaging
 
-Before creating or updating items, fetch the list schema to get column IDs and valid option values:
+```
+slack-lists comment <list-id> <item-id> "Comment text" --message-url <url>
+slack-lists ask <channel> "Question text?" --user @someone
+slack-lists post <channel> "Message text"
+```
 
-```bash
-slack-lists lists info <list-id>
-# Returns columns with IDs, types, and options for select fields
+### Evidence
+
+```
+slack-lists evidence upload <list-id> <item-id> ./file.png
+slack-lists evidence upload <list-id> <item-id> ./file.png --column Evidence --column-type attachment
+slack-lists evidence link <list-id> <item-id> https://example.com
+slack-lists evidence list <list-id> <item-id>
+```
+
+## Schema File Format
+
+The schema file should contain a `schema` or `columns` array (e.g. from Slack list metadata) with `id`, `key`, `name`, `type`, and `options.choices` for selects. Example:
+
+```json
+{
+  "list_id": "F123",
+  "schema": [
+    {
+      "id": "ColumnId123",
+      "key": "priority",
+      "name": "Priority",
+      "type": "select",
+      "options": {
+        "choices": [
+          { "value": "high", "label": "High" },
+          { "value": "medium", "label": "Medium" }
+        ]
+      }
+    }
+  ]
+}
 ```
 
 ## Output Format
 
 All commands output JSON to stdout. Errors output JSON to stderr with exit code 1.
 
-**Success:**
+**Success**
 ```json
 {
   "ok": true,
-  "data": { ... }
+  "data": { "...": "..." }
 }
 ```
 
-**Error:**
+**Error**
 ```json
 {
   "ok": false,
@@ -112,63 +152,34 @@ All commands output JSON to stdout. Errors output JSON to stderr with exit code 
 }
 ```
 
-## Agent Integration Examples
+## Agent Snippet (AGENTS.md / CLAUDE.md)
 
-### Claude Code / Agentic Workflows
+```md
+## Slack Lists CLI (agentic coding)
 
-```bash
-# Agent discovers available lists
-LISTS=$(slack-lists lists)
+You can use the `slack-lists` CLI for agentic coding workflows on Slack Lists. It outputs JSON for machine parsing.
 
-# Agent gets schema to understand fields
-SCHEMA=$(slack-lists lists info L123456)
+### How to discover capabilities
+- Run `slack-lists help` for a JSON manifest of commands, flags, and env vars.
 
-# Agent creates a task item using correct column IDs from schema
-slack-lists items create L123456 --cells '{"col_abc": {"text": "Implement feature X"}}'
+### Required env
+- `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)
 
-# Agent updates status when done
-slack-lists items update L123456 I789 --cells '{"col_status": {"select": "opt_done"}}'
+### Schema handling
+- The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
+- Use `--refresh-schema` if columns/options change.
+
+### Common commands
+- `slack-lists auth status`
+- `slack-lists lists info <list-id>`
+- `slack-lists items list <list-id>`
+- `slack-lists items create <list-id> --name "Task" --priority high`
+- `slack-lists items update <list-id> <item-id> --status completed`
+- `slack-lists evidence upload <list-id> <item-id> ./file.png`
 ```
 
-### MCP Server Integration
+## Scripts
 
-This CLI can be wrapped as an MCP (Model Context Protocol) server to give Claude direct access to Slack Lists without shell execution.
-
-## Development
-
-```bash
-git clone https://github.com/mercury-labs/slack-lists-cli-llm.git
-cd slack-lists-cli-llm
-npm install
-npm run build
-npm link  # Makes 'slack-lists' available globally for testing
-```
-
-## Current Status
-
-**Work in Progress** — This CLI is under active development.
-
-### Implemented
-- [ ] Core infrastructure (CLI framework, Slack client wrapper)
-- [ ] Authentication (`auth status`)
-- [ ] List operations (`lists`, `lists info`, `lists export`)
-- [ ] Item operations (`items list`, `items get`, `items create`, `items update`, `items delete`)
-
-### Planned
-- [ ] Schema-aware field mapping helpers
-- [ ] Pagination handling for large lists
-- [ ] Rate limit handling with backoff
-
-### Under Investigation
-- [ ] Comments on items (requires understanding item thread model)
-- [ ] File attachments (evidence) on items
-
-## Requirements
-
-- Node.js 18+
-- Paid Slack workspace (Lists API requirement)
-- Slack app with appropriate scopes
-
-## License
-
-MIT
+- `npm run build`
+- `npm run dev`
+- `npm run typecheck`
