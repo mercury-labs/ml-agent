@@ -396,7 +396,7 @@ type LinearIssue = {
 function getLinearClient(): LinearClient {
   const apiKey = resolveLinearApiKey();
   if (!apiKey) {
-    throw new Error("Missing Linear API key. Set LINEAR_API_KEY or .slack-lists.config.json");
+    throw new Error("Missing Linear API key. Set LINEAR_API_KEY or .ml-agent.config.json");
   }
   return new LinearClient(apiKey);
 }
@@ -404,7 +404,7 @@ function getLinearClient(): LinearClient {
 function resolveTeamId(option?: string): string {
   const teamId = option ?? resolveLinearTeamId();
   if (!teamId) {
-    throw new Error("Provide --team or set LINEAR_TEAM_ID / .slack-lists.config.json");
+    throw new Error("Provide --team or set LINEAR_TEAM_ID / .ml-agent.config.json");
   }
   return teamId;
 }

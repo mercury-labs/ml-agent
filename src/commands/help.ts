@@ -41,16 +41,24 @@ function getCapabilities() {
         description: "Optional path to config.json (per-list defaults)"
       },
       {
+        name: "ML_AGENT_CONFIG_PATH",
+        description: "Optional path to config.json (per-list defaults)"
+      },
+      {
         name: "SLACK_LIST_THREAD_MAP_PATH",
+        description: "Optional path to threads.json (item thread mapping)"
+      },
+      {
+        name: "ML_AGENT_THREAD_MAP_PATH",
         description: "Optional path to threads.json (item thread mapping)"
       }
     ],
     project_config: {
-      path: "./.slack-lists.config.json",
+      path: "./.ml-agent.config.json",
       description: "Project root config (Linear API key/team/cycle + Slack default channel)"
     },
     schema_cache: {
-      path: "~/.config/slack-lists-cli/schemas/<list-id>.json",
+      path: "~/.config/ml-agent/schemas/<list-id>.json",
       description:
         "Cached schema per list ID (populated from list/item reads; uses $XDG_CONFIG_HOME when set)"
     },

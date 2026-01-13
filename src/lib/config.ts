@@ -99,12 +99,15 @@ export function resolveLinearCycleId(): string | undefined {
 }
 
 export function resolveThreadMapPath(): string {
+  if (process.env.ML_AGENT_THREAD_MAP_PATH) {
+    return process.env.ML_AGENT_THREAD_MAP_PATH;
+  }
   if (process.env.SLACK_LIST_THREAD_MAP_PATH) {
     return process.env.SLACK_LIST_THREAD_MAP_PATH;
   }
 
   const base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(base, "slack-lists-cli", "threads.json");
+  return path.join(base, "ml-agent", "threads.json");
 }
 
 function loadConfig(): CliConfig | null {
@@ -129,12 +132,23 @@ function loadConfig(): CliConfig | null {
 }
 
 function resolveConfigPath(): string | null {
+  if (process.env.ML_AGENT_CONFIG_PATH) {
+    return process.env.ML_AGENT_CONFIG_PATH;
+  }
   if (process.env.SLACK_LIST_CONFIG_PATH) {
     return process.env.SLACK_LIST_CONFIG_PATH;
   }
 
   const base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(base, "slack-lists-cli", "config.json");
+  const primary = path.join(base, "ml-agent", "config.json");
+  const legacy = path.join(base, "slack-lists-cli", "config.json");
+  if (existsSync(primary)) {
+    return primary;
+  }
+  if (existsSync(legacy)) {
+    return legacy;
+  }
+  return primary;
 }
 
 function loadProjectConfig(): ProjectConfig | null {
@@ -159,12 +173,14 @@ function loadProjectConfig(): ProjectConfig | null {
 }
 
 function findProjectConfigPath(): string | null {
-  const filename = ".slack-lists.config.json";
+  const filenames = [".ml-agent.config.json", ".slack-lists.config.json"];
   let current = process.cwd();
   while (true) {
-    const candidate = path.join(current, filename);
-    if (existsSync(candidate)) {
-      return candidate;
+    for (const filename of filenames) {
+      const candidate = path.join(current, filename);
+      if (existsSync(candidate)) {
+        return candidate;
+      }
     }
     const parent = path.dirname(current);
     if (parent === current) {

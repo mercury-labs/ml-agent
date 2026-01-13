@@ -1,4 +1,4 @@
-# slack-lists-cli
+# ml-agent
 
 CLI for agentic coding workflows using Linear + Slack. Commands return JSON for agent consumption.
 
@@ -25,7 +25,7 @@ This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) t
 ## Installation
 
 ```bash
-npm install -g slack-lists-cli
+npm install -g ml-agent
 ```
 
 ### Screenshot setup (optional)
@@ -37,30 +37,30 @@ npx playwright install chromium
 
 ### Local development install (recommended)
 
-If `npm link slack-lists-cli` hangs from another repo, use one of these instead:
+If `npm link ml-agent` hangs from another repo, use one of these instead:
 
 Option A (single-step link):
 ```bash
-npm link /absolute/path/to/slack-lists-cli
+npm link /absolute/path/to/ml-agent
 ```
 
 Option B (file dependency):
 ```bash
-npm install --save-dev /absolute/path/to/slack-lists-cli
+npm install --save-dev /absolute/path/to/ml-agent
 ```
 
-After linking/installing, the bin name is `slack-lists`:
+After linking/installing, the bin name is `ml-agent`:
 ```bash
-slack-lists help
+ml-agent help
 # or
-npx slack-lists help
+npx ml-agent help
 ```
 
 ### No-install dev option
 
 You can always run the CLI directly:
 ```bash
-node /absolute/path/to/slack-lists-cli/dist/index.js <command>
+node /absolute/path/to/ml-agent/dist/index.js <command>
 ```
 
 ## Quickstart (Linear + Slack)
@@ -72,7 +72,7 @@ node /absolute/path/to/slack-lists-cli/dist/index.js <command>
    ```
 3) Create a Linear API key and add it to your project config:
    ```
-   .slack-lists.config.json
+   .ml-agent.config.json
    ```
 4) Invite the bot to the channel where you want updates:
    ```
@@ -94,13 +94,15 @@ node /absolute/path/to/slack-lists-cli/dist/index.js <command>
 - `LINEAR_CYCLE_ID` (optional default)
 - `SLACK_LIST_SCHEMA_PATH` (optional default schema file)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional default channel for comment threads)
-- `SLACK_LIST_CONFIG_PATH` (optional path to config.json for per-list defaults)
-- `SLACK_LIST_THREAD_MAP_PATH` (optional path to threads.json for item → thread mapping)
+- `ML_AGENT_CONFIG_PATH` (optional path to config.json for per-list defaults)
+- `ML_AGENT_THREAD_MAP_PATH` (optional path to threads.json for item → thread mapping)
+- `SLACK_LIST_CONFIG_PATH` (legacy, optional)
+- `SLACK_LIST_THREAD_MAP_PATH` (legacy, optional)
 - `.env.local` or `.env` files are loaded automatically if present
 
 ## Project Config (recommended)
 
-Create `.slack-lists.config.json` in your project root:
+Create `.ml-agent.config.json` in your project root:
 
 ```json
 {
@@ -151,17 +153,17 @@ Optional (for thread cleanup via `threads cleanup`):
 ## Notes
 
 - Linear is now the primary task backend. Slack Lists commands are retained for legacy/testing use.
-- Slack does **not** expose a list discovery API as of January 2026. `slack-lists lists` will return an informative error unless Slack adds this method.
+- Slack does **not** expose a list discovery API as of January 2026. `ml-agent lists` will return an informative error unless Slack adds this method.
 - Items create/update use schema to map friendly flags (`--name`, `--status`, etc). The CLI auto-caches schemas from list/item reads.
 - If a list has no items (or columns never populated), Slack won’t expose those columns. Provide `--schema` or use `--field` with `column_id` in that case.
-- The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
+- The CLI caches schemas per list ID at `~/.config/ml-agent/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - `lists info` will try `slackLists.info`; if unavailable, it infers schema from existing items (limited; no select options or empty columns).
 - Schema cache is updated in the background on list/item reads (best-effort) to keep columns in sync.
 
 ## Help (LLM-friendly)
 
 ```
-slack-lists help
+ml-agent help
 ```
 
 This returns JSON describing all commands, options, and environment variables for agentic coding.
@@ -171,72 +173,72 @@ This returns JSON describing all commands, options, and environment variables fo
 ### Auth
 
 ```
-slack-lists auth status
-slack-lists linear auth status
+ml-agent auth status
+ml-agent linear auth status
 ```
 
 ### Linear Tasks
 
 ```
-slack-lists linear teams
-slack-lists linear states --team <team-id>
-slack-lists issues list
-slack-lists issues list --state "In Progress"
-slack-lists issues get <issue-id>
-slack-lists issues create --title "Task" --team <team-id>
-slack-lists issues update <issue-id> --state "In Progress"
+ml-agent linear teams
+ml-agent linear states --team <team-id>
+ml-agent issues list
+ml-agent issues list --state "In Progress"
+ml-agent issues get <issue-id>
+ml-agent issues create --title "Task" --team <team-id>
+ml-agent issues update <issue-id> --state "In Progress"
 ```
 
 ### Linear Slack Threads
 
 ```
-slack-lists linear comment <issue-id> "Question for the author"
-slack-lists linear comments <issue-id> --compact
+ml-agent linear comment <issue-id> "Question for the author"
+ml-agent linear comments <issue-id> --compact
 ```
 
 ### Lists
 
 ```
-slack-lists lists
-slack-lists lists id <list-url>
-slack-lists lists info <list-id>
-slack-lists schema <list-id>
-slack-lists schema <list-id> --for-update
-slack-lists lists export <list-id> --out ./export.bin
+ml-agent lists
+ml-agent lists id <list-url>
+ml-agent lists info <list-id>
+ml-agent schema <list-id>
+ml-agent schema <list-id> --for-update
+ml-agent lists export <list-id> --out ./export.bin
 ```
 
 ### Access
 
 ```
-slack-lists access set <list-id> --channels C123 --level write
-slack-lists access delete <list-id> --channels C123
+ml-agent access set <list-id> --channels C123 --level write
+ml-agent access delete <list-id> --channels C123
 ```
 
 ### Items
 
 ```
-slack-lists items list <list-id>
-slack-lists items list <list-id> --compact
-slack-lists items get <list-id> <item-id>
-slack-lists items create <list-id> --name "Task" --priority high
-slack-lists items create <list-id> --name "Task" --agent-state needs_input
-slack-lists items update <list-id> <item-id> --status completed
-slack-lists items update <list-id> <item-id> --agent-state ready_for_test
-slack-lists items update <list-id> <item-id> --field "ColumnKey=value"
+ml-agent items list <list-id>
+ml-agent items list <list-id> --compact
+ml-agent items get <list-id> <item-id>
+ml-agent items create <list-id> --name "Task" --priority high
+ml-agent items create <list-id> --name "Task" --agent-state needs_input
+ml-agent items update <list-id> <item-id> --status completed
+ml-agent items update <list-id> <item-id> --agent-state ready_for_test
+ml-agent items update <list-id> <item-id> --field "ColumnKey=value"
 ```
 
 ### Comments & Messaging
 
 ```
-slack-lists comment <list-id> <item-id> "Comment text" --message-url <url>
-slack-lists comments <list-id> <item-id> --compact
-slack-lists comment-edit <channel> <ts> "Revised comment text"
-slack-lists threads set <list-id> <item-id> --message-url <url>
-slack-lists threads get <list-id> <item-id>
-slack-lists threads cleanup <list-id> <item-id> --message-url <url> --root-only
-slack-lists threads edit <list-id> <item-id> "Updated thread comment" --ts <message-ts>
-slack-lists ask <channel> "Question text?" --user @someone
-slack-lists post <channel> "Message text"
+ml-agent comment <list-id> <item-id> "Comment text" --message-url <url>
+ml-agent comments <list-id> <item-id> --compact
+ml-agent comment-edit <channel> <ts> "Revised comment text"
+ml-agent threads set <list-id> <item-id> --message-url <url>
+ml-agent threads get <list-id> <item-id>
+ml-agent threads cleanup <list-id> <item-id> --message-url <url> --root-only
+ml-agent threads edit <list-id> <item-id> "Updated thread comment" --ts <message-ts>
+ml-agent ask <channel> "Question text?" --user @someone
+ml-agent post <channel> "Message text"
 ```
 
 If a list item doesn’t have a Message link yet, `SLACK_LIST_DEFAULT_CHANNEL` is used to
@@ -245,20 +247,20 @@ create a thread and attach the permalink automatically.
 ### Evidence
 
 ```
-slack-lists evidence upload <list-id> <item-id> ./file.png
-slack-lists evidence upload <list-id> <item-id> ./file.png --column Evidence --column-type attachment
-slack-lists evidence link <list-id> <item-id> https://example.com
-slack-lists evidence list <list-id> <item-id>
+ml-agent evidence upload <list-id> <item-id> ./file.png
+ml-agent evidence upload <list-id> <item-id> ./file.png --column Evidence --column-type attachment
+ml-agent evidence link <list-id> <item-id> https://example.com
+ml-agent evidence list <list-id> <item-id>
 ```
 
 ### Screenshots (UI evidence)
 
 ```
-slack-lists screenshot capture https://example.com --out ./ui.png --full
-slack-lists screenshot capture http://localhost:3000 --selector ".hero"
-slack-lists screenshot post https://example.com --channel C123 --comment "UI after change"
-slack-lists screenshot post https://example.com --list-id F123 --item-id I456 --channel C123 --comment "UI attached"
-slack-lists screenshot post https://example.com --message-url <thread-url> --comment "Updated UI"
+ml-agent screenshot capture https://example.com --out ./ui.png --full
+ml-agent screenshot capture http://localhost:3000 --selector ".hero"
+ml-agent screenshot post https://example.com --channel C123 --comment "UI after change"
+ml-agent screenshot post https://example.com --list-id F123 --item-id I456 --channel C123 --comment "UI attached"
+ml-agent screenshot post https://example.com --message-url <thread-url> --comment "Updated UI"
 ```
 
 Screenshots are captured headlessly via Playwright. Use `--wait-for` to wait on a selector
@@ -295,8 +297,8 @@ that represent your agent lifecycle (e.g. `Needs Input`, `In Progress`, `Blocked
 `Ready for Review`, `Ready for Test`) and update issues directly:
 
 ```
-slack-lists issues update <issue-id> --state "Needs Input"
-slack-lists issues update <issue-id> --state "Ready for Test"
+ml-agent issues update <issue-id> --state "Needs Input"
+ml-agent issues update <issue-id> --state "Ready for Test"
 ```
 
 ## Output Format
@@ -323,12 +325,12 @@ All commands output JSON to stdout. Errors output JSON to stderr with exit code 
 ## Agent Snippet (AGENTS.md / CLAUDE.md)
 
 ```md
-## Slack Lists CLI (agentic coding)
+## ML Agent CLI (agentic coding)
 
-You can use the `slack-lists` CLI for agentic coding workflows with Linear + Slack. It outputs JSON for machine parsing.
+You can use the `ml-agent` CLI for agentic coding workflows with Linear + Slack. It outputs JSON for machine parsing.
 
 ### How to discover capabilities
-- Run `slack-lists help` for a JSON manifest of commands, flags, and env vars.
+- Run `ml-agent help` for a JSON manifest of commands, flags, and env vars.
 
 ### Required env
 - `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)
@@ -336,11 +338,13 @@ You can use the `slack-lists` CLI for agentic coding workflows with Linear + Sla
 - `LINEAR_TEAM_ID` (optional default)
 - `LINEAR_CYCLE_ID` (optional default)
 - `SLACK_LIST_DEFAULT_CHANNEL` (optional, channel ID or #name for auto-threading)
-- `SLACK_LIST_CONFIG_PATH` (optional config.json for per-list defaults)
-- `SLACK_LIST_THREAD_MAP_PATH` (optional threads.json for item → thread mapping)
+- `ML_AGENT_CONFIG_PATH` (optional config.json for per-list defaults)
+- `ML_AGENT_THREAD_MAP_PATH` (optional threads.json for item → thread mapping)
+- `SLACK_LIST_CONFIG_PATH` (legacy, optional)
+- `SLACK_LIST_THREAD_MAP_PATH` (legacy, optional)
 
 ### Project config (recommended)
-Create `.slack-lists.config.json` in the repo root with Linear + Slack defaults:
+Create `.ml-agent.config.json` in the repo root with Linear + Slack defaults:
 
 ```json
 {
@@ -356,17 +360,17 @@ Create `.slack-lists.config.json` in the repo root with Linear + Slack defaults:
 ```
 
 ### Schema handling (Slack Lists legacy)
-- The CLI caches schemas per list ID at `~/.config/slack-lists-cli/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
+- The CLI caches schemas per list ID at `~/.config/ml-agent/schemas/<list-id>.json` (or `$XDG_CONFIG_HOME`).
 - Cache is updated automatically on list/item reads; for empty lists, pass `--schema`.
 - Use `--refresh-schema` if columns/options change.
-- Use `slack-lists schema <list-id>` for compact, token-efficient schema output.
-- Use `slack-lists schema <list-id> --for-update` for update hints and examples.
+- Use `ml-agent schema <list-id>` for compact, token-efficient schema output.
+- Use `ml-agent schema <list-id> --for-update` for update hints and examples.
 
 ### Default channel for comments
 - Set `SLACK_LIST_DEFAULT_CHANNEL` (e.g. `#team-channel` or `C12345678`) so the CLI can
   auto-create a thread and store its permalink when you post the first comment on an issue.
 
-You can also set per-list defaults in `~/.config/slack-lists-cli/config.json`:
+You can also set per-list defaults in `~/.config/ml-agent/config.json`:
 ```json
 {
   "default_channel": "C12345678",
@@ -376,38 +380,38 @@ You can also set per-list defaults in `~/.config/slack-lists-cli/config.json`:
 }
 ```
 
-Thread mappings are stored in `~/.config/slack-lists-cli/threads.json` and can be managed
-via `slack-lists threads set/get`.
+Thread mappings are stored in `~/.config/ml-agent/threads.json` and can be managed
+via `ml-agent threads set/get`.
 
 To clean up duplicate threads created by accident:
 - Preferred (requires history scopes):  
-  `slack-lists threads cleanup <list-id> <item-id> --message-url <url>`
+  `ml-agent threads cleanup <list-id> <item-id> --message-url <url>`
 - Without history scopes (root only):  
-  `slack-lists threads cleanup <list-id> <item-id> --message-url <url> --root-only`
+  `ml-agent threads cleanup <list-id> <item-id> --message-url <url> --root-only`
 
 ### Common commands
-- `slack-lists auth status`
-- `slack-lists linear auth status`
-- `slack-lists linear teams`
-- `slack-lists linear states --team <team-id>`
-- `slack-lists issues list`
-- `slack-lists issues get <issue-id>`
-- `slack-lists issues update <issue-id> --state "In Progress"`
-- `slack-lists linear comment <issue-id> "Question"`
-- `slack-lists linear comments <issue-id> --compact`
-- `slack-lists lists info <list-id>`
-- `slack-lists lists id <list-url>`
-- `slack-lists schema <list-id>`
-- `slack-lists schema <list-id> --for-update`
-- `slack-lists items list <list-id>`
-- `slack-lists items list <list-id> --compact`
-- `slack-lists items create <list-id> --name "Task" --priority high`
-- `slack-lists items update <list-id> <item-id> --agent-state needs_input`
-- `slack-lists items update <list-id> <item-id> --status completed`
-- `slack-lists comments <list-id> <item-id> --compact`
-- `slack-lists evidence upload <list-id> <item-id> ./file.png`
-- `slack-lists screenshot capture https://example.com --out ./ui.png`
-- `slack-lists screenshot post https://example.com --channel C123 --comment "UI update"`
+- `ml-agent auth status`
+- `ml-agent linear auth status`
+- `ml-agent linear teams`
+- `ml-agent linear states --team <team-id>`
+- `ml-agent issues list`
+- `ml-agent issues get <issue-id>`
+- `ml-agent issues update <issue-id> --state "In Progress"`
+- `ml-agent linear comment <issue-id> "Question"`
+- `ml-agent linear comments <issue-id> --compact`
+- `ml-agent lists info <list-id>`
+- `ml-agent lists id <list-url>`
+- `ml-agent schema <list-id>`
+- `ml-agent schema <list-id> --for-update`
+- `ml-agent items list <list-id>`
+- `ml-agent items list <list-id> --compact`
+- `ml-agent items create <list-id> --name "Task" --priority high`
+- `ml-agent items update <list-id> <item-id> --agent-state needs_input`
+- `ml-agent items update <list-id> <item-id> --status completed`
+- `ml-agent comments <list-id> <item-id> --compact`
+- `ml-agent evidence upload <list-id> <item-id> ./file.png`
+- `ml-agent screenshot capture https://example.com --out ./ui.png`
+- `ml-agent screenshot post https://example.com --channel C123 --comment "UI update"`
 ```
 
 ## Scripts

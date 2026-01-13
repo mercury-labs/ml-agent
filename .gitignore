@@ -3,6 +3,7 @@ node_modules
 .env
 .env.local
 schema-*.json
+.ml-agent.config.json
 .slack-lists.config.json
 .DS_Store
 npm-debug.log*

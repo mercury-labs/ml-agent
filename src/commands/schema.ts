@@ -85,7 +85,7 @@ function buildUpdateHints(listId: string, columns: CompactColumn[]) {
     .slice(0, 4)
     .map((field) => {
       const value = exampleValue(field);
-      return `slack-lists items update ${listId} <item-id> ${field.set_with} ${value}`;
+      return `ml-agent items update ${listId} <item-id> ${field.set_with} ${value}`;
     });
 
   return { fields, examples };

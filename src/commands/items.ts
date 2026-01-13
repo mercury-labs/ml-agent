@@ -561,7 +561,7 @@ function matchesAssignee(item: Record<string, unknown>, columnId: string, assign
 }
 
 function schemaRequired(flag: string): string {
-  return `Schema required for ${flag}. Run 'slack-lists items list <list-id>' to seed the cache (if the list has items), or provide --schema.`;
+  return `Schema required for ${flag}. Run 'ml-agent items list <list-id>' to seed the cache (if the list has items), or provide --schema.`;
 }
 
 function toCompactItem(item: Record<string, unknown>, schemaIndex?: SchemaIndex) {

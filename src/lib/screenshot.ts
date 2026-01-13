@@ -75,7 +75,7 @@ export async function captureScreenshot(options: ScreenshotCaptureOptions): Prom
 }
 
 export function createTempScreenshotPath(): string {
-  const name = `slack-lists-screenshot-${Date.now()}.png`;
+  const name = `ml-agent-screenshot-${Date.now()}.png`;
   return path.join(os.tmpdir(), name);
 }
 

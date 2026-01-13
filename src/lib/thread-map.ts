@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { resolveThreadMapPath } from "./config";
+import os from "os";
 
 export type ThreadEntry = {
   permalink?: string;
@@ -58,7 +59,21 @@ async function loadThreadMap(): Promise<ThreadMap> {
   } catch (error) {
     const code = (error as { code?: string }).code;
     if (code === "ENOENT") {
-      return {};
+      const legacyPath = path.join(
+        process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"),
+        "slack-lists-cli",
+        "threads.json"
+      );
+      try {
+        const raw = await fs.readFile(legacyPath, "utf-8");
+        return JSON.parse(raw) as ThreadMap;
+      } catch (legacyError) {
+        const legacyCode = (legacyError as { code?: string }).code;
+        if (legacyCode === "ENOENT") {
+          return {};
+        }
+        throw legacyError;
+      }
     }
     throw error;
   }

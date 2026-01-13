@@ -28,9 +28,9 @@ function extractSlackErrorCode(error: unknown): string | undefined {
 function hintForSlackError(code: string, error: unknown): string | undefined {
   switch (code) {
     case "list_not_found":
-      return "Verify the list ID (F...), share the list to a channel the bot can access, run `slack-lists access set`, or use `--as-user` with a user token.";
+      return "Verify the list ID (F...), share the list to a channel the bot can access, run `ml-agent access set`, or use `--as-user` with a user token.";
     case "not_in_channel":
-      return "Invite the bot to the channel or grant list access via `slack-lists access set`.";
+      return "Invite the bot to the channel or grant list access via `ml-agent access set`.";
     case "missing_scope": {
       const needed = (error as { data?: { needed?: string } })?.data?.needed;
       return needed

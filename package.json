@@ -1,9 +1,9 @@
 {
-  "name": "slack-lists-cli",
+  "name": "ml-agent",
   "version": "0.0.1",
-  "description": "CLI for Slack Lists",
+  "description": "CLI for agentic coding workflows using Linear + Slack",
   "bin": {
-    "slack-lists": "dist/index.js"
+    "ml-agent": "dist/index.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

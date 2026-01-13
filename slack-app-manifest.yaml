@@ -1,12 +1,12 @@
 {
   "display_information": {
-    "name": "Agent - Lists CLI",
-    "description": "Agentic coding CLI for Slack Lists",
+    "name": "ML Agent CLI",
+    "description": "Agentic coding CLI for Linear + Slack",
     "background_color": "#0f172a"
   },
   "features": {
     "bot_user": {
-      "display_name": "lists-cli",
+      "display_name": "ml-agent",
       "always_online": false
     }
   },
