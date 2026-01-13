@@ -123,6 +123,18 @@ export function resolveProjectName(): string {
   return sanitizeProjectName(path.basename(root));
 }
 
+export function resolveProjectConfigTargetPath(): string {
+  if (process.env.ML_AGENT_CONFIG_PATH) {
+    return process.env.ML_AGENT_CONFIG_PATH;
+  }
+  const existing = findProjectConfigPath();
+  if (existing) {
+    return existing;
+  }
+  const root = findProjectRoot();
+  return path.join(root, ".ml-agent.config.json");
+}
+
 export function resolveThreadMapPath(): string {
   if (process.env.ML_AGENT_THREAD_MAP_PATH) {
     return process.env.ML_AGENT_THREAD_MAP_PATH;
