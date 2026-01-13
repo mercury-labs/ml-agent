@@ -15,7 +15,7 @@ type CliConfig = {
 let cachedConfig: CliConfig | null | undefined;
 let cachedProjectConfig: ProjectConfig | null | undefined;
 
-type ProjectConfig = {
+export type ProjectConfig = {
   slack?: {
     default_channel?: string;
   };
@@ -96,6 +96,14 @@ export function resolveLinearCycleId(): string | undefined {
   }
   const project = loadProjectConfig();
   return project?.linear?.cycle_id;
+}
+
+export function getProjectConfig(): ProjectConfig | null {
+  return loadProjectConfig();
+}
+
+export function getProjectConfigPath(): string | null {
+  return findProjectConfigPath();
 }
 
 export function resolveThreadMapPath(): string {

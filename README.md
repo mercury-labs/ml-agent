@@ -168,6 +168,16 @@ ml-agent help
 
 This returns JSON describing all commands, options, and environment variables for agentic coding.
 
+## Setup (agent-friendly)
+
+Run:
+```
+ml-agent setup
+```
+
+This returns JSON steps the agent can follow to configure Slack + Linear, including prompts
+for any missing tokens or defaults.
+
 ## Usage
 
 ### Auth
@@ -331,6 +341,7 @@ You can use the `ml-agent` CLI for agentic coding workflows with Linear + Slack.
 
 ### How to discover capabilities
 - Run `ml-agent help` for a JSON manifest of commands, flags, and env vars.
+- Run `ml-agent setup` for a JSON checklist of setup steps and missing inputs.
 
 ### Required env
 - `SLACK_TOKEN` (or `SLACK_BOT_TOKEN` / `SLACK_USER_TOKEN` with `--as-user`)

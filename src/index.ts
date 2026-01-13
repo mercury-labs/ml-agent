@@ -13,6 +13,7 @@ import { registerLinearCommands } from "./commands/linear";
 import { registerListsCommands } from "./commands/lists";
 import { registerSchemaCommand } from "./commands/schema";
 import { registerScreenshotCommands } from "./commands/screenshot";
+import { registerSetupCommand } from "./commands/setup";
 import { registerThreadsCommands } from "./commands/threads";
 import { loadEnvFiles } from "./lib/env";
 import { CLI_DESCRIPTION, CLI_NAME, CLI_VERSION } from "./lib/metadata";
@@ -45,6 +46,7 @@ registerCommentCommands(program);
 registerFilesCommands(program);
 registerScreenshotCommands(program);
 registerThreadsCommands(program);
+registerSetupCommand(program);
 registerHelpCommand(program);
 
 program.parseAsync(process.argv).catch((error: unknown) => {

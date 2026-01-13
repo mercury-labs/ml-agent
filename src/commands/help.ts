@@ -118,6 +118,12 @@ function getCapabilities() {
         options: ["--team <team-id>", "--title <title>", "--description <text>", "--state <state>", "--assignee <assignee>", "--cycle <cycle-id>"]
       },
       {
+        command: "setup",
+        description: "Return setup steps for agents",
+        args: [],
+        options: []
+      },
+      {
         command: "auth status",
         description: "Verify token works",
         args: [],
