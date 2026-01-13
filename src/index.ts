@@ -10,6 +10,7 @@ import { registerHelpCommand } from "./commands/help";
 import { registerItemsCommands } from "./commands/items";
 import { registerListsCommands } from "./commands/lists";
 import { registerSchemaCommand } from "./commands/schema";
+import { registerScreenshotCommands } from "./commands/screenshot";
 import { registerThreadsCommands } from "./commands/threads";
 import { loadEnvFiles } from "./lib/env";
 import { CLI_DESCRIPTION, CLI_NAME, CLI_VERSION } from "./lib/metadata";
@@ -38,6 +39,7 @@ registerSchemaCommand(program);
 registerItemsCommands(program);
 registerCommentCommands(program);
 registerFilesCommands(program);
+registerScreenshotCommands(program);
 registerThreadsCommands(program);
 registerHelpCommand(program);
 

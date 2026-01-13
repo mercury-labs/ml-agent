@@ -222,6 +222,48 @@ function getCapabilities() {
         description: "List evidence fields on an item",
         args: ["list-id", "item-id"],
         options: []
+      },
+      {
+        command: "screenshot capture <url>",
+        description: "Capture a headless browser screenshot",
+        args: ["url"],
+        options: [
+          "--out <path>",
+          "--full",
+          "--selector <selector>",
+          "--wait-for <selector>",
+          "--wait <ms>",
+          "--timeout <ms>",
+          "--wait-until <load|domcontentloaded|networkidle>",
+          "--width <px>",
+          "--height <px>"
+        ]
+      },
+      {
+        command: "screenshot post <url>",
+        description: "Capture a screenshot and upload to Slack",
+        args: ["url"],
+        options: [
+          "--channel <channel>",
+          "--thread-ts <ts>",
+          "--message-url <url>",
+          "--comment <text>",
+          "--title <text>",
+          "--list-id <list-id>",
+          "--item-id <item-id>",
+          "--column <column>",
+          "--column-type <attachment|reference>",
+          "--out <path>",
+          "--keep",
+          "--full",
+          "--selector <selector>",
+          "--wait-for <selector>",
+          "--wait <ms>",
+          "--timeout <ms>",
+          "--wait-until <load|domcontentloaded|networkidle>",
+          "--width <px>",
+          "--height <px>"
+        ]
       }
     ]
   };

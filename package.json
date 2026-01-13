@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "@slack/web-api": "^7.13.0",
-    "commander": "^11.0.0"
+    "commander": "^11.0.0",
+    "playwright": "^1.55.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

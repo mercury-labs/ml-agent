@@ -5,6 +5,7 @@ export default defineConfig({
   format: ["cjs"],
   target: "node18",
   platform: "node",
+  external: ["playwright"],
   sourcemap: true,
   dts: true,
   clean: true,

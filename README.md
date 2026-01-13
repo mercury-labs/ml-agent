@@ -19,11 +19,19 @@ This CLI is built specifically for AI coding agents (Claude, GPT, Codex, etc.) t
 - Node.js >= 18
 - Slack token with lists scopes
 - Paid Slack workspace
+- Playwright (optional, for screenshot commands)
 
 ## Installation
 
 ```bash
 npm install -g slack-lists-cli
+```
+
+### Screenshot setup (optional)
+
+The `screenshot` commands use Playwright. Install a browser once:
+```bash
+npx playwright install chromium
 ```
 
 ### Local development install (recommended)
@@ -199,6 +207,19 @@ slack-lists evidence link <list-id> <item-id> https://example.com
 slack-lists evidence list <list-id> <item-id>
 ```
 
+### Screenshots (UI evidence)
+
+```
+slack-lists screenshot capture https://example.com --out ./ui.png --full
+slack-lists screenshot capture http://localhost:3000 --selector ".hero"
+slack-lists screenshot post https://example.com --channel C123 --comment "UI after change"
+slack-lists screenshot post https://example.com --list-id F123 --item-id I456 --channel C123 --comment "UI attached"
+slack-lists screenshot post https://example.com --message-url <thread-url> --comment "Updated UI"
+```
+
+Screenshots are captured headlessly via Playwright. Use `--wait-for` to wait on a selector
+or `--wait` to pause before capture if the UI needs time to settle.
+
 ## Schema File Format
 
 Provide a schema file when the CLI can’t infer one (e.g., empty lists). It should contain a `schema` or `columns` array (from Slack list metadata or exports) with `id`, `key`, `name`, `type`, and `options.choices` for selects. Example:
@@ -321,6 +342,8 @@ To clean up duplicate threads created by accident:
 - `slack-lists items update <list-id> <item-id> --status completed`
 - `slack-lists comments <list-id> <item-id> --compact`
 - `slack-lists evidence upload <list-id> <item-id> ./file.png`
+- `slack-lists screenshot capture https://example.com --out ./ui.png`
+- `slack-lists screenshot post https://example.com --channel C123 --comment "UI update"`
 ```
 
 ## Scripts
