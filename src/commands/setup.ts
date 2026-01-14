@@ -32,6 +32,8 @@ export function registerSetupCommand(program: Command): void {
       const cycleId = process.env.LINEAR_CYCLE_ID ?? projectConfig?.linear?.cycle_id;
       const defaultChannel =
         process.env.SLACK_LIST_DEFAULT_CHANNEL ?? projectConfig?.slack?.default_channel;
+      const stateMap = projectConfig?.linear?.state_map;
+      const stateSync = Boolean(projectConfig?.linear?.state_sync);
 
       const steps: SetupStep[] = [
         {
@@ -92,6 +94,20 @@ export function registerSetupCommand(program: Command): void {
             }
           ],
           commands: ["ml-agent linear cycles --current"]
+        },
+        {
+          id: "linear-state-map",
+          title: "Infer Linear state mapping (optional)",
+          status: !stateSync || (stateMap && Object.keys(stateMap).length > 0) ? "complete" : "optional",
+          details: "When state_sync is enabled, infer a thread_state → Linear state map.",
+          requires: [
+            {
+              key: "linear.state_map",
+              description: "Thread state → Linear state mapping",
+              current: Boolean(stateMap && Object.keys(stateMap).length > 0)
+            }
+          ],
+          commands: ["ml-agent sync cycles --write-team --write"]
         },
         {
           id: "project-config",

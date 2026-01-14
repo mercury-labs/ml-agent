@@ -4,6 +4,7 @@ import path from "path";
 
 import {
   resolveLinearApiKey,
+  resolveLinearStateSync,
   resolveLinearTeamId,
   resolveLinearTeamKey,
   resolveProjectConfigTargetPath
@@ -25,6 +26,22 @@ const TEAM_CYCLES_QUERY = `
           number
           startsAt
           endsAt
+        }
+      }
+    }
+  }
+`;
+
+const TEAM_STATES_QUERY = `
+  query TeamStates($teamId: String!) {
+    team(id: $teamId) {
+      id
+      name
+      states {
+        nodes {
+          id
+          name
+          type
         }
       }
     }
@@ -56,6 +73,14 @@ type TeamCyclesResponse = {
     id?: string;
     name?: string;
     cycles?: { nodes?: CycleNode[] };
+  };
+};
+
+type TeamStatesResponse = {
+  team?: {
+    id?: string;
+    name?: string;
+    states?: { nodes?: Array<{ id?: string; name?: string; type?: string }> };
   };
 };
 
@@ -105,8 +130,15 @@ export function registerSyncCommand(program: Command): void {
         const cyclesEnabled = cycles.length > 0;
 
         let updatedConfigPath: string | null = null;
+        let stateMapResult: { written: boolean; map: Record<string, string> } | null = null;
         if (options.writeTeam) {
           updatedConfigPath = await updateTeamInConfig(resolvedTeamId);
+        }
+        if (resolveLinearStateSync()) {
+          stateMapResult = await maybeWriteStateMap(client, resolvedTeamId);
+          if (stateMapResult.written) {
+            updatedConfigPath = resolveProjectConfigTargetPath();
+          }
         }
         if (options.write) {
           if (!current?.id) {
@@ -119,6 +151,8 @@ export function registerSyncCommand(program: Command): void {
               current_cycle: null,
               cycles,
               cycles_enabled: cyclesEnabled,
+              state_map: stateMapResult?.map ?? null,
+              state_map_written: stateMapResult?.written ?? false,
               updated_config_path: updatedConfigPath,
               message
             };
@@ -134,23 +168,27 @@ export function registerSyncCommand(program: Command): void {
 
         if (options.current) {
           outputJson({
-            ok: Boolean(current),
-            team_id: resolvedTeamId,
-            current_cycle: current ?? null,
-            cycles_enabled: cyclesEnabled,
-            updated_config_path: updatedConfigPath
-          });
-          return;
-        }
-
-        outputJson({
-          ok: true,
+          ok: Boolean(current),
           team_id: resolvedTeamId,
           current_cycle: current ?? null,
-          cycles,
           cycles_enabled: cyclesEnabled,
+          state_map: stateMapResult?.map ?? null,
+          state_map_written: stateMapResult?.written ?? false,
           updated_config_path: updatedConfigPath
         });
+        return;
+      }
+
+      outputJson({
+        ok: true,
+        team_id: resolvedTeamId,
+        current_cycle: current ?? null,
+        cycles,
+        cycles_enabled: cyclesEnabled,
+        state_map: stateMapResult?.map ?? null,
+        state_map_written: stateMapResult?.written ?? false,
+        updated_config_path: updatedConfigPath
+      });
       } catch (error) {
         handleCommandError(error, globals.verbose);
       }
@@ -224,6 +262,101 @@ async function updateTeamInConfig(teamId: string): Promise<string> {
   await fs.mkdir(path.dirname(configPath), { recursive: true });
   await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
   return configPath;
+}
+
+async function maybeWriteStateMap(
+  client: LinearClient,
+  teamId: string
+): Promise<{ written: boolean; map: Record<string, string> }> {
+  const stateMap = await inferStateMap(client, teamId);
+  if (Object.keys(stateMap).length === 0) {
+    return { written: false, map: stateMap };
+  }
+
+  const configPath = resolveProjectConfigTargetPath();
+  let config: Record<string, unknown> = {};
+  try {
+    const raw = await fs.readFile(configPath, "utf-8");
+    config = JSON.parse(raw) as Record<string, unknown>;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== "ENOENT") {
+      throw error;
+    }
+  }
+
+  const linear = (config.linear ?? {}) as Record<string, unknown>;
+  const existing = linear.state_map;
+  if (existing && typeof existing === "object" && Object.keys(existing as Record<string, unknown>).length > 0) {
+    return { written: false, map: stateMap };
+  }
+
+  linear.state_map = stateMap;
+  config.linear = linear;
+
+  await fs.mkdir(path.dirname(configPath), { recursive: true });
+  await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+  return { written: true, map: stateMap };
+}
+
+async function inferStateMap(
+  client: LinearClient,
+  teamId: string
+): Promise<Record<string, string>> {
+  const result = await client.request<TeamStatesResponse>(TEAM_STATES_QUERY, { teamId });
+  const states = result.team?.states?.nodes ?? [];
+  if (states.length === 0) {
+    return {};
+  }
+
+  const map: Record<string, string> = {};
+  const waiting = findStateByName(states, [
+    /needs input/i,
+    /waiting/i,
+    /awaiting/i,
+    /pending/i
+  ]);
+  const blocked = findStateByName(states, [/blocked/i]);
+  const ready = findStateByName(states, [/in progress/i, /doing/i, /implement/i, /development/i]) ?? findStateByType(states, "started");
+  const done = findStateByName(states, [/done/i, /completed/i, /shipped/i, /released/i]) ?? findStateByType(states, "completed");
+
+  if (waiting) {
+    map.waiting_on_user = waiting.name!;
+  }
+  if (blocked) {
+    map.blocked = blocked.name!;
+  }
+  if (ready) {
+    map.ready_to_implement = ready.name!;
+  }
+  if (done) {
+    map.done = done.name!;
+  }
+
+  return map;
+}
+
+function findStateByName(
+  states: Array<{ name?: string; type?: string }>,
+  patterns: RegExp[]
+): { name?: string; type?: string } | undefined {
+  for (const state of states) {
+    const name = state.name;
+    if (!name) {
+      continue;
+    }
+    if (patterns.some((pattern) => pattern.test(name))) {
+      return state;
+    }
+  }
+  return undefined;
+}
+
+function findStateByType(
+  states: Array<{ name?: string; type?: string }>,
+  type: string
+): { name?: string; type?: string } | undefined {
+  return states.find((state) => state.type === type);
 }
 
 async function resolveTeamId(

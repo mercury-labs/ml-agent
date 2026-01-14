@@ -129,7 +129,8 @@ Create `.ml-agent.config.json` in your project root:
 ```
 
 Use `team_key` if you only know the short team code; run `ml-agent sync cycles --team-key PRO --current --write-team --write`
-to resolve the team ID and current cycle.
+to resolve the team ID and current cycle. If `linear.state_sync` is enabled and `linear.state_map` is missing, this sync
+step will infer a default map automatically.
 
 This file is ignored by git by default.
 `team_key` is the short team code (e.g. `PRO`) and can be used to resolve the real team ID via `ml-agent sync cycles`.
@@ -363,8 +364,8 @@ ml-agent issues update <issue-id> --state "Ready for Test"
 `ml-agent issues list --compact` returns `thread_state` and `latest_thread` so agents can
 decide whether to ask questions or proceed without fetching full issue payloads.
 
-To auto-sync thread state to Linear states, set `linear.state_sync: true` and provide
-`linear.state_map` (thread state → Linear state name or ID). Example:
+To auto-sync thread state to Linear states, set `linear.state_sync: true`. If no `linear.state_map` is present, it is
+inferred automatically on `ml-agent sync cycles --write-team --write`. You can override it manually if needed.
 
 ```json
 {
