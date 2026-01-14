@@ -3,6 +3,8 @@ import { Command } from "commander";
 import {
   resolveDefaultChannel,
   resolveLinearApiKey,
+  resolveLinearStateMap,
+  resolveLinearStateSync,
   resolveLinearTeamId,
   resolveLinearTeamKey,
   resolveToken
@@ -119,6 +121,22 @@ const ATTACHMENT_CREATE_MUTATION = `
       attachment {
         id
         url
+      }
+    }
+  }
+`;
+
+const ISSUE_UPDATE_MUTATION = `
+  mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+    issueUpdate(id: $id, input: $input) {
+      success
+      issue {
+        id
+        state {
+          id
+          name
+          type
+        }
       }
     }
   }
@@ -251,6 +269,7 @@ export function registerLinearCommands(program: Command): void {
     .option("--label <label>", "Label for the thread")
     .option("--state <state>", "State for the thread")
     .option("--attach", "Attach the thread permalink to Linear", false)
+    .option("--sync-state", "Sync Linear state when thread state is provided", false)
     .action(async (issueId: string, options, command: Command) => {
       const globals = getGlobalOptions(command);
       const slackClient = new SlackListsClient(resolveToken(globals));
@@ -292,6 +311,13 @@ export function registerLinearCommands(program: Command): void {
           state: options.state as string | undefined
         });
 
+        const stateSync = await maybeSyncIssueState({
+          client: linear,
+          issue,
+          threadState: options.state as string | undefined,
+          syncRequested: Boolean(options.syncState)
+        });
+
         outputJson({
           ok: true,
           issue_id: issueId,
@@ -299,7 +325,8 @@ export function registerLinearCommands(program: Command): void {
           thread_ts: threadTs,
           permalink: url,
           label: options.label as string | undefined,
-          state: options.state as string | undefined
+          state: options.state as string | undefined,
+          state_sync: stateSync ?? undefined
         });
       } catch (error) {
         handleCommandError(error, globals.verbose);
@@ -316,6 +343,7 @@ export function registerLinearCommands(program: Command): void {
     .option("--message-url <url>", "Slack message URL to infer thread")
     .option("--thread-label <label>", "Label to store for the thread")
     .option("--thread-state <state>", "State to store for the thread")
+    .option("--sync-state", "Sync Linear state when thread state is provided", false)
     .action(async (issueId: string, text: string, options, command: Command) => {
       const globals = getGlobalOptions(command);
       const slackClient = new SlackListsClient(resolveToken(globals));
@@ -411,7 +439,17 @@ export function registerLinearCommands(program: Command): void {
           });
         }
 
-        outputJson(result);
+        const stateSync = await maybeSyncIssueState({
+          client: linear,
+          issue,
+          threadState,
+          syncRequested: Boolean(options.syncState)
+        });
+
+        outputJson({
+          ...result,
+          state_sync: stateSync ?? undefined
+        });
       } catch (error) {
         handleCommandError(error, globals.verbose);
       }
@@ -530,7 +568,7 @@ type TeamStatesResponse = {
   team?: {
     id?: string;
     name?: string;
-    states?: { nodes?: Array<Record<string, unknown>> };
+    states?: { nodes?: Array<{ id?: string; name?: string; type?: string }> };
   };
 };
 
@@ -546,6 +584,7 @@ type LinearIssue = {
   id: string;
   identifier?: string;
   title?: string;
+  state?: { id?: string; name?: string; type?: string };
   team?: { id?: string; name?: string };
   attachments?: { nodes?: Array<{ url?: string }> };
 };
@@ -649,6 +688,90 @@ async function resolveTeamIdByKey(client: LinearClient, teamKey: string): Promis
       (team.name && team.name.toLowerCase() === normalized)
   );
   return match?.id ?? null;
+}
+
+async function maybeSyncIssueState({
+  client,
+  issue,
+  threadState,
+  syncRequested
+}: {
+  client: LinearClient;
+  issue: LinearIssue;
+  threadState?: string;
+  syncRequested: boolean;
+}): Promise<{ synced: boolean; from?: string; to?: string; error?: string } | null> {
+  if (!threadState) {
+    return null;
+  }
+
+  const map = resolveLinearStateMap();
+  if (!map || Object.keys(map).length === 0) {
+    return null;
+  }
+
+  const shouldSync = syncRequested || resolveLinearStateSync();
+  if (!shouldSync) {
+    return null;
+  }
+
+  const mapped = resolveMappedState(map, threadState);
+  if (!mapped) {
+    return { synced: false, error: `No state mapping for thread state: ${threadState}` };
+  }
+
+  const teamId = issue.team?.id;
+  if (!teamId) {
+    return { synced: false, error: "Issue missing team id for state sync" };
+  }
+
+  try {
+    const stateId = await resolveStateId(client, teamId, mapped);
+    const currentStateId = issue.state?.id;
+    if (stateId && currentStateId === stateId) {
+      return { synced: true, from: issue.state?.name, to: issue.state?.name };
+    }
+
+    await client.request(ISSUE_UPDATE_MUTATION, {
+      id: issue.id,
+      input: {
+        stateId
+      }
+    });
+
+    return { synced: true, from: issue.state?.name, to: mapped };
+  } catch (error) {
+    return { synced: false, error: (error as Error).message };
+  }
+}
+
+function resolveMappedState(map: Record<string, string>, threadState: string): string | null {
+  const normalized = threadState.toLowerCase();
+  for (const [key, value] of Object.entries(map)) {
+    if (key.toLowerCase() === normalized) {
+      return value;
+    }
+  }
+  return null;
+}
+
+async function resolveStateId(
+  client: LinearClient,
+  teamId: string,
+  input: string
+): Promise<string | undefined> {
+  if (looksLikeId(input)) {
+    return input;
+  }
+
+  const result = await client.request<TeamStatesResponse>(TEAM_STATES_QUERY, { teamId });
+  const states = result.team?.states?.nodes ?? [];
+  const normalized = input.toLowerCase();
+  const match = states.find((state) => state.name?.toLowerCase() === normalized);
+  if (!match?.id) {
+    throw new Error(`Unknown Linear state: ${input}`);
+  }
+  return match.id;
 }
 
 function findCurrentCycle(cycles: CycleNode[]): CycleNode | null {

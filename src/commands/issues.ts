@@ -85,6 +85,32 @@ const ISSUE_UPDATE_MUTATION = `
   }
 `;
 
+const ISSUE_COMMENTS_QUERY = `
+  query IssueComments($id: String!, $first: Int!, $after: String) {
+    issue(id: $id) {
+      id
+      comments(first: $first, after: $after) {
+        nodes {
+          id
+          body
+          createdAt
+          updatedAt
+          user {
+            id
+            name
+            displayName
+            email
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
+
 const COMMENT_CREATE_MUTATION = `
   mutation CommentCreate($input: CommentCreateInput!) {
     commentCreate(input: $input) {
@@ -92,6 +118,18 @@ const COMMENT_CREATE_MUTATION = `
       comment {
         id
         body
+        url
+      }
+    }
+  }
+`;
+
+const ATTACHMENT_CREATE_MUTATION = `
+  mutation AttachmentCreate($input: AttachmentCreateInput!) {
+    attachmentCreate(input: $input) {
+      success
+      attachment {
+        id
         url
       }
     }
@@ -146,6 +184,7 @@ type IssueNode = {
   title?: string;
   description?: string;
   url?: string;
+  team?: { id?: string; name?: string };
   state?: { id?: string; name?: string; type?: string };
   assignee?: { id?: string; name?: string; email?: string };
   cycle?: { id?: string; name?: string };
@@ -178,6 +217,29 @@ type UsersResponse = {
 
 type TeamsResponse = {
   teams?: { nodes?: Array<{ id?: string; key?: string; name?: string }> };
+};
+
+type CommentNode = {
+  id?: string;
+  body?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  user?: { id?: string; name?: string; displayName?: string; email?: string };
+};
+
+type IssueCommentsPageInfo = {
+  hasNextPage?: boolean;
+  endCursor?: string;
+};
+
+type IssueCommentsResponse = {
+  issue?: {
+    id?: string;
+    comments?: {
+      nodes?: CommentNode[];
+      pageInfo?: IssueCommentsPageInfo;
+    };
+  };
 };
 
 export function registerIssuesCommands(program: Command): void {
@@ -289,6 +351,42 @@ export function registerIssuesCommands(program: Command): void {
     });
 
   issues
+    .command("comments")
+    .description("List comments for a Linear issue")
+    .argument("<issue-id>", "Issue ID or identifier")
+    .option("--limit <count>", "Maximum comments to return", "100")
+    .option("--compact", "Return only id/body/author/timestamps", false)
+    .action(async (issueId: string, options, command: Command) => {
+      const globals = getGlobalOptions(command);
+      try {
+        const client = getLinearClient();
+        const limit = parseLimit(options.limit, 100);
+        const result = await fetchIssueComments(client, issueId, limit);
+        const comments = result.comments;
+
+        const payload = options.compact
+          ? comments.map((comment) => ({
+              id: comment.id,
+              author: comment.user?.displayName ?? comment.user?.name ?? comment.user?.email ?? null,
+              created_at: comment.createdAt,
+              updated_at: comment.updatedAt,
+              body: comment.body
+            }))
+          : comments;
+
+        outputJson({
+          ok: true,
+          issue_id: issueId,
+          comment_count: comments.length,
+          comments_truncated: result.hasNextPage,
+          comments: payload
+        });
+      } catch (error) {
+        handleCommandError(error, globals.verbose);
+      }
+    });
+
+  issues
     .command("comment")
     .description("Post a comment on a Linear issue (Markdown supported)")
     .argument("<issue-id>", "Issue ID or identifier")
@@ -304,6 +402,75 @@ export function registerIssuesCommands(program: Command): void {
           }
         });
         outputJson({ ok: true, result });
+      } catch (error) {
+        handleCommandError(error, globals.verbose);
+      }
+    });
+
+  issues
+    .command("attach")
+    .description("Attach a URL to a Linear issue")
+    .argument("<issue-id>", "Issue ID or identifier")
+    .argument("<url>", "URL to attach")
+    .option("--title <text>", "Title for the attachment")
+    .option("--metadata <json>", "Optional JSON metadata for the attachment")
+    .action(async (issueId: string, url: string, options, command: Command) => {
+      const globals = getGlobalOptions(command);
+      try {
+        const client = getLinearClient();
+        const metadata = parseMetadata(options.metadata as string | undefined);
+        const input: Record<string, unknown> = {
+          issueId,
+          url,
+          title: options.title ?? url,
+          metadata: {
+            source: "ml-agent",
+            ...metadata
+          }
+        };
+
+        const result = await client.request<Record<string, unknown>>(ATTACHMENT_CREATE_MUTATION, { input });
+        outputJson({ ok: true, result });
+      } catch (error) {
+        handleCommandError(error, globals.verbose);
+      }
+    });
+
+  issues
+    .command("status")
+    .description("Summarize issue state + thread state + last comment")
+    .argument("<issue-id>", "Issue ID or identifier")
+    .option("--comment-limit <count>", "Maximum comments to scan for last activity", "50")
+    .action(async (issueId: string, options, command: Command) => {
+      const globals = getGlobalOptions(command);
+      try {
+        const client = getLinearClient();
+        const issue = await fetchIssue(client, issueId);
+        const teamId = await resolveTeamId(client, issue.team?.id);
+        const thread = await getThreadEntry(linearThreadScope(teamId), issue.id);
+
+        const commentLimit = parseLimit(options.commentLimit, 50);
+        const commentsResult = await fetchIssueComments(client, issueId, commentLimit);
+        const lastCommentAt = findLatestCommentTimestamp(commentsResult.comments);
+
+        outputJson({
+          ok: true,
+          issue: {
+            id: issue.id,
+            identifier: issue.identifier,
+            title: issue.title,
+            url: issue.url,
+            state: issue.state?.name,
+            state_id: issue.state?.id,
+            assignee: issue.assignee?.email ?? issue.assignee?.name ?? null,
+            updated_at: issue.updatedAt
+          },
+          thread_state: thread?.state ?? null,
+          thread_label: thread?.label ?? null,
+          latest_thread: thread ?? null,
+          last_comment_at: lastCommentAt,
+          comments_truncated: commentsResult.hasNextPage
+        });
       } catch (error) {
         handleCommandError(error, globals.verbose);
       }
@@ -446,8 +613,8 @@ function resolveCycleId(option?: string): string | undefined {
   return option ?? resolveLinearCycleId();
 }
 
-function parseLimit(value: string | undefined): number {
-  const limit = Number(value ?? 50);
+function parseLimit(value: string | undefined, fallback = 50): number {
+  const limit = Number(value ?? fallback);
   if (!Number.isFinite(limit) || limit <= 0) {
     throw new Error("--limit must be a positive number");
   }
@@ -553,6 +720,80 @@ async function resolveTeamIdByKey(client: LinearClient, teamKey: string): Promis
       (team.name && team.name.toLowerCase() === normalized)
   );
   return match?.id ?? null;
+}
+
+async function fetchIssue(client: LinearClient, issueId: string): Promise<IssueNode> {
+  const result = await client.request<{ issue?: IssueNode }>(ISSUE_QUERY, { id: issueId });
+  if (!result.issue) {
+    throw new Error("Issue not found");
+  }
+  return result.issue;
+}
+
+async function fetchIssueComments(
+  client: LinearClient,
+  issueId: string,
+  limit: number
+): Promise<{ comments: CommentNode[]; hasNextPage: boolean }> {
+  const comments: CommentNode[] = [];
+  let cursor: string | undefined = undefined;
+  let hasNextPage = false;
+
+  while (comments.length < limit) {
+    const batchSize = Math.min(50, limit - comments.length);
+    const result: IssueCommentsResponse = await client.request<IssueCommentsResponse>(ISSUE_COMMENTS_QUERY, {
+      id: issueId,
+      first: batchSize,
+      after: cursor
+    });
+
+    const page = result.issue?.comments?.nodes ?? [];
+    comments.push(...page);
+
+    const pageInfo: IssueCommentsPageInfo | undefined = result.issue?.comments?.pageInfo;
+    if (!pageInfo?.hasNextPage || !pageInfo.endCursor) {
+      hasNextPage = false;
+      break;
+    }
+    cursor = pageInfo.endCursor;
+    hasNextPage = true;
+  }
+
+  return {
+    comments: comments.slice(0, limit),
+    hasNextPage
+  };
+}
+
+function findLatestCommentTimestamp(comments: CommentNode[]): string | null {
+  let latestTime = 0;
+  let latestValue: string | null = null;
+  for (const comment of comments) {
+    const candidate = comment.updatedAt ?? comment.createdAt;
+    if (!candidate) {
+      continue;
+    }
+    const time = Date.parse(candidate);
+    if (Number.isNaN(time)) {
+      continue;
+    }
+    if (time >= latestTime) {
+      latestTime = time;
+      latestValue = candidate;
+    }
+  }
+  return latestValue;
+}
+
+function parseMetadata(value?: string): Record<string, unknown> {
+  if (!value) {
+    return {};
+  }
+  try {
+    return JSON.parse(value) as Record<string, unknown>;
+  } catch {
+    throw new Error("--metadata must be valid JSON");
+  }
 }
 
 function linearThreadScope(teamId: string): string {

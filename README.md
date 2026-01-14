@@ -117,7 +117,13 @@ Create `.ml-agent.config.json` in your project root:
     "api_key": "lin_api_...",
     "team_id": "TEAM_ID",
     "team_key": "PRO",
-    "cycle_id": "CYCLE_ID"
+    "cycle_id": "CYCLE_ID",
+    "state_sync": true,
+    "state_map": {
+      "waiting_on_user": "Needs Input",
+      "blocked": "Blocked",
+      "ready_to_implement": "In Progress"
+    }
   }
 }
 ```
@@ -209,9 +215,12 @@ ml-agent issues list
 ml-agent issues list --state "In Progress"
 ml-agent issues list --compact
 ml-agent issues get <issue-id>
+ml-agent issues comments <issue-id> --compact
 ml-agent issues create --title "Task" --team <team-id>
 ml-agent issues update <issue-id> --state "In Progress"
 ml-agent issues comment <issue-id> "Markdown *supported*"
+ml-agent issues attach <issue-id> https://example.com --title "Spec"
+ml-agent issues status <issue-id>
 ```
 
 ### Linear Slack Threads
@@ -282,6 +291,14 @@ ml-agent evidence link <list-id> <item-id> https://example.com
 ml-agent evidence list <list-id> <item-id>
 ```
 
+### Files (Slack)
+
+```
+ml-agent files upload ./file.pdf --channel C123 --comment "Reference"
+ml-agent files upload ./file.pdf --issue ABC-123 --channel C123 --comment "Attached to Linear"
+ml-agent files upload ./file.pdf --message-url <thread-url> --comment "Reply with file"
+```
+
 ### Screenshots (UI evidence)
 
 ```
@@ -333,6 +350,21 @@ ml-agent issues update <issue-id> --state "Ready for Test"
 
 `ml-agent issues list --compact` returns `thread_state` and `latest_thread` so agents can
 decide whether to ask questions or proceed without fetching full issue payloads.
+
+To auto-sync thread state to Linear states, set `linear.state_sync: true` and provide
+`linear.state_map` (thread state → Linear state name or ID). Example:
+
+```json
+{
+  "linear": {
+    "state_sync": true,
+    "state_map": {
+      "waiting_on_user": "Needs Input",
+      "ready_to_implement": "In Progress"
+    }
+  }
+}
+```
 
 ## Output Format
 
@@ -393,7 +425,13 @@ Create `.ml-agent.config.json` in the repo root with Linear + Slack defaults:
     "api_key": "lin_api_...",
     "team_id": "TEAM_ID",
     "team_key": "PRO",
-    "cycle_id": "CYCLE_ID"
+    "cycle_id": "CYCLE_ID",
+    "state_sync": true,
+    "state_map": {
+      "waiting_on_user": "Needs Input",
+      "blocked": "Blocked",
+      "ready_to_implement": "In Progress"
+    }
   }
 }
 ```
@@ -441,6 +479,9 @@ To clean up duplicate threads created by accident:
 - `ml-agent issues list --compact`
 - `ml-agent issues get <issue-id>`
 - `ml-agent issues update <issue-id> --state "In Progress"`
+- `ml-agent issues comments <issue-id> --compact`
+- `ml-agent issues attach <issue-id> https://example.com`
+- `ml-agent issues status <issue-id>`
 - `ml-agent issues comment <issue-id> "Markdown *ok*"`
 - `ml-agent linear comment <issue-id> "Question"`
 - `ml-agent linear comments <issue-id> --compact`
@@ -456,6 +497,7 @@ To clean up duplicate threads created by accident:
 - `ml-agent items update <list-id> <item-id> --status completed`
 - `ml-agent comments <list-id> <item-id> --compact`
 - `ml-agent evidence upload <list-id> <item-id> ./file.png`
+- `ml-agent files upload ./file.pdf --channel C123`
 - `ml-agent screenshot capture https://example.com --out ./ui.png`
 - `ml-agent screenshot post https://example.com --channel C123 --comment "UI update"`
 - `ml-agent screenshot post https://example.com --issue ABC-123 --channel C123 --comment "UI update"`

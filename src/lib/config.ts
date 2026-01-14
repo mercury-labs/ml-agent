@@ -28,6 +28,8 @@ export type ProjectConfig = {
     team_id?: string;
     team_key?: string;
     cycle_id?: string;
+    state_map?: Record<string, string>;
+    state_sync?: boolean;
   };
 };
 
@@ -110,6 +112,16 @@ export function resolveLinearCycleId(): string | undefined {
   }
   const project = loadProjectConfig();
   return project?.linear?.cycle_id;
+}
+
+export function resolveLinearStateMap(): Record<string, string> | undefined {
+  const project = loadProjectConfig();
+  return project?.linear?.state_map;
+}
+
+export function resolveLinearStateSync(): boolean {
+  const project = loadProjectConfig();
+  return Boolean(project?.linear?.state_sync);
 }
 
 export function getProjectConfig(): ProjectConfig | null {

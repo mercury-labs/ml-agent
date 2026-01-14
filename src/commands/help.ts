@@ -90,7 +90,8 @@ function getCapabilities() {
           "--thread-ts <ts>",
           "--message-url <url>",
           "--thread-label <label>",
-          "--thread-state <state>"
+          "--thread-state <state>",
+          "--sync-state"
         ]
       },
       {
@@ -122,7 +123,8 @@ function getCapabilities() {
           "--thread-ts <ts>",
           "--label <label>",
           "--state <state>",
-          "--attach"
+          "--attach",
+          "--sync-state"
         ]
       },
       {
@@ -138,6 +140,12 @@ function getCapabilities() {
         options: []
       },
       {
+        command: "issues comments <issue-id>",
+        description: "List comments for a Linear issue",
+        args: ["issue-id"],
+        options: ["--limit <count>", "--compact"]
+      },
+      {
         command: "issues create",
         description: "Create a Linear issue",
         args: [],
@@ -148,6 +156,18 @@ function getCapabilities() {
         description: "Update a Linear issue",
         args: ["issue-id"],
         options: ["--team <team-id>", "--title <title>", "--description <text>", "--state <state>", "--assignee <assignee>", "--cycle <cycle-id>"]
+      },
+      {
+        command: "issues attach <issue-id> <url>",
+        description: "Attach a URL to a Linear issue",
+        args: ["issue-id", "url"],
+        options: ["--title <text>", "--metadata <json>"]
+      },
+      {
+        command: "issues status <issue-id>",
+        description: "Summarize issue state + thread state + last comment",
+        args: ["issue-id"],
+        options: ["--comment-limit <count>"]
       },
       {
         command: "issues comment <issue-id> <text>",
@@ -311,6 +331,19 @@ function getCapabilities() {
         description: "Edit a thread comment by timestamp",
         args: ["list-id", "item-id", "text"],
         options: ["--message-url <url>", "--channel <channel>", "--thread-ts <ts>", "--ts <message-ts>"]
+      },
+      {
+        command: "files upload <file-path>",
+        description: "Upload a file to Slack",
+        args: ["file-path"],
+        options: [
+          "--channel <channel>",
+          "--thread-ts <ts>",
+          "--message-url <url>",
+          "--comment <text>",
+          "--title <text>",
+          "--issue <issue-id>"
+        ]
       },
       {
         command: "ask <channel> <text>",
