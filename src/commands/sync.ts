@@ -102,6 +102,7 @@ export function registerSyncCommand(program: Command): void {
 
         const cycles = (result.team?.cycles?.nodes ?? []).filter(Boolean);
         const current = findCurrentCycle(cycles);
+        const cyclesEnabled = cycles.length > 0;
 
         let updatedConfigPath: string | null = null;
         if (options.writeTeam) {
@@ -109,13 +110,17 @@ export function registerSyncCommand(program: Command): void {
         }
         if (options.write) {
           if (!current?.id) {
+            const message = cyclesEnabled
+              ? "No current cycle found to write."
+              : "No cycles found for this team (cycles may be disabled).";
             const payload = {
               ok: false,
               team_id: resolvedTeamId,
               current_cycle: null,
               cycles,
+              cycles_enabled: cyclesEnabled,
               updated_config_path: updatedConfigPath,
-              message: "No current cycle found to write."
+              message
             };
             if (options.current) {
               outputJson(payload);
@@ -132,6 +137,7 @@ export function registerSyncCommand(program: Command): void {
             ok: Boolean(current),
             team_id: resolvedTeamId,
             current_cycle: current ?? null,
+            cycles_enabled: cyclesEnabled,
             updated_config_path: updatedConfigPath
           });
           return;
@@ -142,6 +148,7 @@ export function registerSyncCommand(program: Command): void {
           team_id: resolvedTeamId,
           current_cycle: current ?? null,
           cycles,
+          cycles_enabled: cyclesEnabled,
           updated_config_path: updatedConfigPath
         });
       } catch (error) {
