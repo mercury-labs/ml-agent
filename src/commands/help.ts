@@ -134,6 +134,12 @@ function getCapabilities() {
         options: ["--team <team-id>", "--cycle <cycle-id>", "--state <state>", "--assignee <assignee>", "--limit <count>", "--compact"]
       },
       {
+        command: "issues search <query>",
+        description: "Search Linear issues with a query string",
+        args: ["query"],
+        options: ["--limit <count>", "--compact"]
+      },
+      {
         command: "issues get <issue-id>",
         description: "Get a Linear issue",
         args: ["issue-id"],

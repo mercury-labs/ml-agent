@@ -57,6 +57,26 @@ const ISSUE_QUERY = `
   }
 `;
 
+const ISSUE_SEARCH_QUERY = `
+  query IssueSearch($query: String!, $first: Int!) {
+    issueSearch(query: $query, first: $first) {
+      nodes {
+        id
+        identifier
+        title
+        description
+        url
+        team { id name }
+        state { id name type }
+        assignee { id name email }
+        cycle { id name }
+        updatedAt
+        createdAt
+      }
+    }
+  }
+`;
+
 const ISSUE_CREATE_MUTATION = `
   mutation IssueCreate($input: IssueCreateInput!) {
     issueCreate(input: $input) {
@@ -192,6 +212,12 @@ type IssueNode = {
   createdAt?: string;
 };
 
+type IssueSearchResponse = {
+  issueSearch?: {
+    nodes?: IssueNode[];
+  };
+};
+
 type TeamIssuesResponse = {
   team?: {
     id?: string;
@@ -324,6 +350,47 @@ export function registerIssuesCommands(program: Command): void {
         outputJson({
           ok: true,
           team_id: teamId,
+          issue_count: trimmed.length,
+          issues: payload
+        });
+      } catch (error) {
+        handleCommandError(error, globals.verbose);
+      }
+    });
+
+  issues
+    .command("search")
+    .description("Search Linear issues with a query string")
+    .argument("<query>", "Search query")
+    .option("--limit <count>", "Maximum issues to return", "25")
+    .option("--compact", "Return only id/identifier/title/state", false)
+    .action(async (query: string, options, command: Command) => {
+      const globals = getGlobalOptions(command);
+      try {
+        const client = getLinearClient();
+        const limit = parseLimit(options.limit, 25);
+        const result = await client.request<IssueSearchResponse>(ISSUE_SEARCH_QUERY, {
+          query,
+          first: Math.min(limit, 50)
+        });
+
+        const issues = result.issueSearch?.nodes ?? [];
+        const trimmed = issues.slice(0, limit);
+
+        const payload = options.compact
+          ? trimmed.map((issue) => ({
+              id: issue.id,
+              identifier: issue.identifier,
+              title: issue.title,
+              state: issue.state?.name,
+              assignee: issue.assignee?.email ?? issue.assignee?.name,
+              cycle: issue.cycle?.name
+            }))
+          : trimmed;
+
+        outputJson({
+          ok: true,
+          query,
           issue_count: trimmed.length,
           issues: payload
         });

@@ -215,6 +215,7 @@ ml-agent sync cycles --team-key PRO --current --write-team
 ml-agent issues list
 ml-agent issues list --state "In Progress"
 ml-agent issues list --compact
+ml-agent issues search "assignee:me status:In Progress" --compact
 ml-agent issues get <issue-id>
 ml-agent issues comments <issue-id> --compact
 ml-agent issues create --title "Task" --team <team-id>
@@ -488,6 +489,7 @@ To clean up duplicate threads created by accident:
 - `ml-agent sync cycles --team-key PRO --current --write-team`
 - `ml-agent issues list`
 - `ml-agent issues list --compact`
+- `ml-agent issues search "assignee:me" --compact`
 - `ml-agent issues get <issue-id>`
 - `ml-agent issues update <issue-id> --state "In Progress"`
 - `ml-agent issues comments <issue-id> --compact`
